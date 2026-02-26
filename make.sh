@@ -18,7 +18,7 @@ Where the options are:
 --target  TARGET  Build make target TARGET (default: app-run)
 --finance         Run the finance app (default)
 --medical         Run the medical app
---arxiv.          Run the arxiv app
+--arxiv           Run the arxiv app
 
 For the finance app:
 --ibm             Generate research for IBM  (ignored if not running the finance app)
