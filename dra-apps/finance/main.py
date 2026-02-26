@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """
-Deep Orchestrator Finance Research Example
+Deep Orchestrator Finance Research Application
 
-This example demonstrates the Deep Orchestrator (AdaptiveOrchestrator) for financial research with:
+This application demonstrates the Deep Orchestrator (AdaptiveOrchestrator) for financial research with:
 - Dynamic agent creation and caching
 - Knowledge extraction and accumulation
 - Budget tracking (tokens, cost, time)

@@ -24,6 +24,13 @@ Here are the most useful `make` targets for this application:
 
 > [!NOTE]
 > For easy demonstration purposes, default definitions for the required flags in the `Makefile` allow `app-run-finance` to execute without providing any flags.
+> 
+> In our experience, the application often runs for a long time when using Ollama inference, but can be fast when using OpenAI or Anthropic. If you want to limit it to a short run to see what it does (with less than optimal results...), try one of these commands instead:
+>
+> ```shell
+> make.sh --short-run app-run-finance
+> make APP_ARGS=--short-run app-run-finance
+> ```
 
 Without using make, the minimum required arguments for the finance application are `--ticker TICKER` and `--company-name COMPANY_NAME`.
 
