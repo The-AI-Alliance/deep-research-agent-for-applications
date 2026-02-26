@@ -18,17 +18,20 @@ Where the options are:
 --target  TARGET  Build make target TARGET (default: app-run)
 --finance         Run the finance app (default)
 --medical         Run the medical app
+--arxiv.          Run the arxiv app
 
 For the finance app:
 --ibm             Generate research for IBM  (ignored if not running the finance app)
 --meta            Generate research for Meta (ignored if not running the finance app)
 
-For the medical app:
+For the medical and arxiv app:
 --query  "QUERY"  Use this query (ignored if not running the medical app)
 --title  "TITLE"  Report title
 --report-title "TITLE"  
                   Same as "--title TITLE".
---terms  "TERMS"  Terms/keywords that are important for this topic.
+--terms  "TERMS"  Terms/keywords that are important for this topic. (Only for the medical app)
+--subjects "SUBJECTS"
+                  The subject areas to focus on. (Only for the arxiv app)
 
 --openai          Use OpenAI models for inference:
                     Orchestration:    $OPENAI_RESEARCH_MODEL
@@ -36,7 +39,8 @@ For the medical app:
 --ollama          Use Ollama models for inference:
                     Orchestration:    $OLLAMA_RESEARCH_MODEL
                     Excel report gen: $OLLAMA_EXCEL_WRITER_MODEL
---short           Do a short run (low "max values" for testing)
+--short | --short-run
+                  Do a short run (low "max values" for testing)
 --noop            Just print the command that will be executed, but don't run it.
 --debug           Use the debug versions of the mcp-agent config files and other debug features.
 
@@ -67,7 +71,7 @@ do
 			DEBUG=true
 		)
 		;;
-	--short)
+	--short|--short-run)
 		vars+=(
 			APP_ARGS="--short-run"
 		)
@@ -89,6 +93,12 @@ do
 		which_app=medical
 		vars+=(
 			APP="medical"
+		)
+		;;
+	--arxiv)
+		which_app=arxiv
+		vars+=(
+			APP="arxiv"
 		)
 		;;
 	--openai)
@@ -128,6 +138,12 @@ do
 			TERMS="$1"
 		)
 		;;
+	--subjects)
+		shift
+		vars+=(
+			SUBJECTS="$1"
+		)
+		;;
 	--ollama)
 		vars+=(
 			RESEARCH_MODEL="$OLLAMA_RESEARCH_MODEL"
@@ -163,5 +179,3 @@ EOF
 print "\a\a"
 sleep 1
 print "\a\a"
-
-

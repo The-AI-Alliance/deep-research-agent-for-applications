@@ -21,7 +21,8 @@ TIMESTAMP           ?=$(shell date "+%Y-%m-%d_%H-%M-%S")
 
 FINANCE_APP                ?= finance
 MEDICAL_APP                ?= medical
-APPS                       ?= ${FINANCE_APP} ${MEDICAL_APP}
+ARXIV_APP                  ?= arxiv
+APPS                       ?= ${FINANCE_APP} ${MEDICAL_APP} ${ARXIV_APP}
 
 # Default:
 APP                        ?= ${FINANCE_APP}
@@ -32,14 +33,6 @@ MAX_COST_DOLLARS           ?= 2.0
 MAX_TIME_MINUTES           ?= 15
 APP_ARGS                   ?=
 
-# For the medical app:
-# Pass in a quoted string for QUERY or prompt the user.
-# Do the same for the report title. Or, you will be prompted for them.
-# QUERY                      ?= 
-# TERMS                      ?=
-# REPORT_TITLE               ?= 
-MEDICAL_RESEARCH_PROMPT_FILE ?= medical_research_agent.md
-
 # For the Finance app:
 TICKER                     ?= META
 COMPANY_NAME               ?= Meta Platforms, Inc.
@@ -48,6 +41,21 @@ EXCEL_WRITER_MODEL         ?= o4-mini
 FIN_RESEARCH_PROMPT_FILE   ?= financial_research_agent.md
 EXCEL_WRITER_PROMPT_FILE   ?= excel_writer_agent.md
 OUTPUT_SPREADSHEET         ?= ${TICKER}_financials.xlsx
+
+# For the medical app:
+# Pass in a quoted string, the comma-separated terms, and report title,
+# or you will be prompted for them.
+# QUERY                      ?= 
+# TERMS                      ?=
+# REPORT_TITLE               ?= 
+MEDICAL_RESEARCH_PROMPT_FILE ?= medical_research_agent.md
+
+# For the arxiv app:
+# Pass in a quoted string and report title, or you will be prompted for them.
+# QUERY                      ?= 
+# SUBJECTS                   ?= 
+# REPORT_TITLE               ?= 
+ARXIV_RESEARCH_PROMPT_FILE   ?= arxiv_research_agent.md
 
 # For all apps:
 
@@ -64,6 +72,11 @@ else ifeq (medical,${APP})
 	# Instead of defining a default here, use the user-supplied title
 	# to create the report name.
 	# OUTPUT_REPORT           ?= medical-report.md
+else ifeq (arxiv,${APP})
+	OUTPUT_DIR              ?= output/${APP}
+	# Instead of defining a default here, use the user-supplied title
+	# to create the report name.
+	# OUTPUT_REPORT           ?= arxiv-report.md
 else
 	OUTPUT_DIR              ?= output/${APP}/${TIMESTAMP}
 	OUTPUT_REPORT           ?= report.md
@@ -214,7 +227,7 @@ endef
 
 all list-apps::
 	@echo "Available Apps: ${APPS}"
-	@echo "To run a particular app, use 'make run-app-foo'. See also 'make app-help'."
+	@echo "To run a particular app 'foo', use 'make run-app-foo'. See also 'make app-help'."
 
 apps_run := ${APPS:%=app-run-%}
 ${apps_run}::
@@ -280,6 +293,26 @@ do-app-run-medical::
 		--markdown-yaml-header "${MARKDOWN_YAML_HEADER_FILE}" \
 		--templates-dir "${TEMPLATES_DIR}" \
 		--medical-research-prompt-path "${MEDICAL_RESEARCH_PROMPT_FILE}" \
+		--research-model "${RESEARCH_MODEL}" \
+		--provider "${INFERENCE_PROVIDER}" \
+		--mcp-agent-config "${MCP_AGENT_CONFIG_FILE}" \
+		--temperature ${TEMPERATURE} \
+		--max-iterations ${MAX_ITERATIONS} \
+		--max-tokens ${MAX_TOKENS} \
+		--max-cost-dollars ${MAX_COST_DOLLARS} \
+		--max-time-minutes ${MAX_TIME_MINUTES} \
+		--verbose ${APP_ARGS}
+#		--markdown-report "${OUTPUT_REPORT}" 
+		
+do-app-run-arxiv::
+	cd ${APPS_DIR} && uv run -m ${APP_MODULE} \
+		--query "${QUERY}" \
+		--subjects "${SUBJECTS}" \
+		--report-title "${REPORT_TITLE}" \
+		--output-dir "${OUTPUT_DIR}" \
+		--markdown-yaml-header "${MARKDOWN_YAML_HEADER_FILE}" \
+		--templates-dir "${TEMPLATES_DIR}" \
+		--arxiv-research-prompt-path "${ARXIV_RESEARCH_PROMPT_FILE}" \
 		--research-model "${RESEARCH_MODEL}" \
 		--provider "${INFERENCE_PROVIDER}" \
 		--mcp-agent-config "${MCP_AGENT_CONFIG_FILE}" \
@@ -360,7 +393,13 @@ print-info-app:
 	@echo "  EXCEL_WRITER_PROMPT_FILE     '${EXCEL_WRITER_PROMPT_FILE}'"
 	@echo
 	@echo "For the Medical App:"
+	@echo "  QUERY                        '${QUERY}'"
+	@echo "  TERMS                        '${TERMS}'"
 	@echo "  MEDICAL_RESEARCH_PROMPT_FILE '${MEDICAL_RESEARCH_PROMPT_FILE}'"
+	@echo
+	@echo "For the ArXiv App:"
+	@echo "  QUERY                        '${QUERY}'"
+	@echo "  ARXIV_RESEARCH_PROMPT_FILE   '${ARXIV_RESEARCH_PROMPT_FILE}'"
 	@echo
 	@echo "APP_ARGS                       '${APP_ARGS}'"
 	@echo

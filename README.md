@@ -120,17 +120,18 @@ For using the medical research app to research _diabetes mellitus_:
 ```shell
 make.sh --medical \
   --query "What are the causes of diabetes mellitus?" \
-  --report-title "Diabetes Mellitus" \
-  --terms "diabetes,insulin,pancreas"
+  --terms "diabetes,insulin,pancreas" \
+  --report-title "Diabetes Mellitus"
 
 make QUERY="What are the causes of diabetes mellitus?" \
-    REPORT_TITLE="Diabetes Mellitus" app-run-medical \
-    TERMS="diabetes,insulin,pancreas"
+    TERMS="diabetes,insulin,pancreas" \
+    REPORT_TITLE="Diabetes Mellitus" \
+    app-run-medical
 
 cd dra-apps && uv run -m medical.main \
     --query "What are the causes of diabetes mellitus?" \
-    --report-title "Diabetes Mellitus" \
-    --terms "diabetes,insulin,pancreas"
+    --terms "diabetes,insulin,pancreas" \
+    --report-title "Diabetes Mellitus"
 ```
 
 > [!NOTE]

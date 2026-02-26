@@ -5,27 +5,27 @@ nav_order: 10
 has_children: false
 ---
 
-# Deep Research Agent: Applications for Finance and Medicine
+# Deep Research Agent: Applications for Finance, Medicine, and ArXiv Research
 
 {: .tip}
 > **Tip:** Use the search box at the top of this page to find specific content.
 
-Welcome to the **The AI Alliance**: **Deep Research Agent: Applications for Finance and Medicine**. This project started as an example application of using a _deep research_ agent for financial research and recently a medical research application was added, demonstrating the universality and flexibility of the deep research approach and the underlying tool kits.   
+Welcome to the **The AI Alliance**: **Deep Research Agent for Applications** project, which provides example applications using a powerful _deep research_ agent called [`mcp-agent`](https://github.com/lastmile-ai/mcp-agent){:target="mcp-agent"}from [LastMile AI](https://lastmileai.dev){:target="lastmile"}. Several example applications are provided:
+
+* **Finance:** Research the financials for a publicly-traded company.
+* **Medical:** Research a disease or pharmaceutical.
+* **ArXiv:** Research a topic by examining papers in [ArXiv.org](https://arxiv.org){:target="arxiv"}.
+
+Other applications are planned...
+
+All of them demonstrate the universality and flexibility of the deep research _design pattern_ as implemented by the underlying [`mcp-agent`](https://github.com/lastmile-ai/mcp-agent){:target="mcp-agent"} tool kit.   
 
 {: .note}
 > **Note:** Do you have domain expertise, especially in finance, medical, legal, automation, industrial processes, etc.? Do you have AI agent expertise? Or, do you want to grow your expertise in these areas. Please join us! See our [contributing]({{site.baseurl}}/contributing) page for details.
 
-## What Is It?
-
-This applications use a **deep research agent** designed to collect comprehensive information from public sources and generate detailed research reports. 
-
-The finance application targets financial analysts or investors as users, who want to research publicly-traded companies. 
-
-The medical application targets interested "lay" people and eventually domain experts who want to do research on medical conditions, pharmaceuticals, etc. (This application is currently in its early stages...)
-
 ## About
 
-The applications leverage AI to perform automated research, analysis, and reporting. In fact, they are a _thin veneer_ over a sophisticated agent framework, [mcp-agent](https://github.com/lastmile-ai/mcp-agent){:target="mcp-agent"}, a framework for creating AI agents with Model Context Protocol (MCP) integration, from [LastMile AI](https://lastmileai.dev){:target="lastmile"}, and application library code built on top of it.
+The applications leverage AI to perform automated research, analysis, and reporting. In fact, they are a _thin veneer_ over a sophisticated agent framework, [`mcp-agent`](https://github.com/lastmile-ai/mcp-agent){:target="mcp-agent"}, a framework for creating AI agents with Model Context Protocol (MCP) integration, from [LastMile AI](https://lastmileai.dev){:target="lastmile"}, and application library code built on top of it.
 
 The finance research application gathers data from multiple reliable financial sources to create structured investment reports with:
 
@@ -36,7 +36,9 @@ The finance research application gathers data from multiple reliable financial s
 - Risk and opportunity assessments
 - Investor sentiment analysis
 
-The medical research application currently uses medical MCP servers and web search, prioritizing known-reliable and freely-accessible sources.
+The medical research application currently uses a medical MCP server and web search, prioritizing known-reliable and freely-accessible sources, like [PubMed](https://pubmed.ncbi.nlm.nih.gov/){:target="pubmed"}.
+
+The arxiv research application focuses its research on papers in [ArXiv.org](https://arxiv.org){:target="arxiv"} and also demonstrates the use of a tool called [Docling](https://docling-project.github.io/docling/){:target="docling"} for parsing documents like PDFs.
 
 Other applications are planned. Possibilities include legal research, general science, industrial processes, including automation, etc. 
 
@@ -60,6 +62,10 @@ make app-medical-help    # Details on running the medical app.
 make app-medical-run     # Run the medical app with default arguments.
 make -n app-run-medical  # Show the command that would be run, but don't run it.
 
+make app-arxiv-help      # Details on running the arxiv app.
+make app-arxiv-run       # Run the arxiv app with default arguments.
+make -n app-run-arxiv    # Show the command that would be run, but don't run it.
+
 # For additional information:
 make help               # General help about the make targets.
 ```
@@ -68,4 +74,4 @@ make help               # General help about the make targets.
 {: .note}
 > **NOTE:**
 >
-> The `app-run-*` commands shown will invoke the inference service (OpenAI by default), incurring charges.
+> The `app-run-*` commands shown will invoke the inference service (OpenAI by default), incurring charges!
