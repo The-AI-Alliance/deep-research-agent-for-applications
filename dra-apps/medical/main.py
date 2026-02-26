@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """
-Deep Orchestrator Medical Research Example
+Deep Orchestrator Medical Research Application
 
-This example demonstrates the Deep Orchestrator (AdaptiveOrchestrator) for medical research with:
+This application demonstrates the Deep Orchestrator (AdaptiveOrchestrator) for medical research with:
 - Dynamic agent creation and caching
 - Knowledge extraction and accumulation
 - Budget tracking (tokens, cost, time)

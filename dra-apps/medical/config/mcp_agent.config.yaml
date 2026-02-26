@@ -21,7 +21,7 @@ mcp:
       args: ["mcp-server-fetch"]
     medical-mcp:
       command: "node"
-      "args": ["/opt/homebrew/lib/node_modules/medical-mcp/build/index.js"]
+      args: ["/opt/homebrew/lib/node_modules/medical-mcp/build/index.js"]
     filesystem:
       command: "npx"
       args: ["-y", "@modelcontextprotocol/server-filesystem", ".."]

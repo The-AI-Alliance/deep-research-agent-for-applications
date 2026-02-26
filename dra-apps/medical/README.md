@@ -69,9 +69,10 @@ Here are the most useful `make` targets for this application:
 | `app-run-medical`    | Run the medical application. Prompts you for a research query and a report title. |
 
 > [!NOTE]
-> The application can run for a long time! If you want to limit it to a short run to see what it does (with less than optimal results...), try this instead:
+> In our experience, the application often runs for a long time when using Ollama inference, but can be fast when using OpenAI or Anthropic. If you want to limit it to a short run to see what it does (with less than optimal results...), try one of these commands instead:
 >
 > ```shell
+> make.sh --short-run app-run-medical
 > make APP_ARGS=--short-run app-run-medical
 > ```
 
@@ -82,18 +83,18 @@ Here is an example of the shortest `make.sh`, `make`, and CLI commands you can r
 ```shell
 make.sh --medical \
   --query "What are the causes of diabetes mellitus?" \
-  --report-title "Diabetes Mellitus" \
-  --terms "diabetes,insulin,pancreas"
+  --terms "diabetes,insulin,pancreas" \
+  --report-title "Diabetes Mellitus"
 
 make QUERY="What are the causes of diabetes mellitus?" \
-    REPORT_TITLE="Diabetes Mellitus" \
     TERMS="diabetes,insulin,pancreas" \
+    REPORT_TITLE="Diabetes Mellitus" \
     app-run-medical
 
 cd dra-apps && uv run -m medical.main \
     --query "What are the causes of diabetes mellitus?" \
-    --report-title "Diabetes Mellitus" \
-    --terms "diabetes,insulin,pancreas"
+    --terms "diabetes,insulin,pancreas" \
+    --report-title "Diabetes Mellitus"
 ```
 
 The application provides many optional CLI arguments to configure its behavior. Use the following `make` and CLI commands to see the help.
@@ -251,7 +252,7 @@ cd dra-apps && uv run -m medical.main \
 
 The unique options for the medical application include the `--query` and `--report-title`. We pass an empty string in the `Makefile`, so you will be prompted for them. 
 
-There is also a `--markdown-report` option that specifies the report's file name. The `Makefile` doesn't use this argument for the medical application (it does for the finance application...). Instead, it allows the application to synthesize a suitable name based on the report title you specify. However, it will be written in the `--output-dir` location, so you can find it easily.
+There is also a `--markdown-report` option that specifies the report's file name. The `Makefile` doesn't use this argument for the arxiv and medical applications (it does for the finance application...). Instead, it allows the arxiv and medical applications to synthesize a suitable name based on the report title you specify. However, it will be written in the `--output-dir` location, so you can find it easily.
 
 Finally, `--medical-research-prompt-path`, is also unique to this app. It is the path to the prompt template file. The default value for this path is `medical_research_agent.md`. Because a directory path isn't specified, this file will be searched for in the value passed with `--templates-dir`, which defaults to `dra/apps/medical/templates`.
 
