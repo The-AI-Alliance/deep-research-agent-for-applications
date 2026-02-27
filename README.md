@@ -58,7 +58,13 @@ See [How to Create a New Application](#how-to-create-a-new-application) below fo
 
 ## Setup
 
-An account with OpenAI or Anthropic is required, or you can use a local inference option like Ollama with models like `gpt-oss:20b` and `qwen3.5:27b`. Those are the three supported model inference options, currently. See [Usage](#usage) and [Configuration](#configuration) below.
+Points to know about setting up and running the applications.
+
+### Model Inference
+
+An account with OpenAI or Anthropic is required, or you can use local inference with Ollama and models like `gpt-oss:20b` and `qwen3.5:27b`. Those are the three supported model inference options. See [Usage](#usage) and [Configuration](#configuration) below for specifying your choice.
+
+Choosing effective models for agentic applications is not easy. The more powerful OpenAI and Anthropic models work well, but are more expensive, especially when developing and testing applications. Choosing inference with Ollama is more economical, but finding a model that performs effectively, yet is small enough for the host machine is not easy. In our experience, using Ollama with `gpt-oss:20b` worked _most of the time_ in testing and development, but OpenAI provided the best results for actual research. Hence, consider experimenting with Ollama and then running "real" research with OpenAI or Anthropic.
 
 ### Prerequisites
 
