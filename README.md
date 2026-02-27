@@ -1,17 +1,21 @@
-# Deep Research Agent: Example Applications Using AI Agents in Finance and Medicine
+# Deep Research Agent for Applications
 
-A deep research agent designed to collect comprehensive information about topic and generate detailed research reports. There are two applications currently:
+_Using a DRA toolkit for applications in Finance, Medicine, and other research tasks._
+
+This project demonstrates a deep research agent designed to collect comprehensive information about topics and generate detailed research reports. There are several example applications included in the repository:
 
 * **Finance:** Research publicly-traded companies and generate detailed investment research reports.
 * **Medicine:** Research a query on medical topics and prepare a detailed, aggregated report.
-* Others are planned...
+* **ArXiv:** Research a topic by focusing on papers available at [ArXiv](https://arxiv.org).
+
+Others are planned...
 
 <p align="center">
 <a href="https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/LICENSE.Apache-2.0"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg"/></a>
 <a href="https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/LICENSE.CC-BY-4.00"><img src="https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg"/></a>
 </p>
 
-Here is the finance application in action:
+Here is a video of the finance application in action:
 
 https://github.com/user-attachments/assets/60675db5-6e0a-4a8d-9463-6a0f9d0a46d7
 
@@ -36,7 +40,7 @@ See the application's [README](https://github.com/The-AI-Alliance/deep-research-
 
 ### Medical
 
-This more-recent application leverages AI to perform automated medical research and analysis. Based on the user query, it gathers data from multiple reliable sources to create structured reports with:
+This application leverages AI to perform automated medical research and analysis. Based on the user query, it gathers data from multiple reliable sources to create structured reports with:
 
 - Summary of the findings
 - References to the sources of information
@@ -44,21 +48,23 @@ This more-recent application leverages AI to perform automated medical research 
 
 See also the application's [README](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-apps/medical/README.md), which provides specific information about running and configuring this application. For example, there is a `node` module for an MCP server that has to be installed locally on your machine; using `npx` as is done for other node-based MCP servers doesn't work for this server.
 
+### ArXiv
+
+This application focuses on finding papers hosted at [ArXiv](https://arxiv.org) that relate to a user query, such as recent progress in various aspects of AI. Papers are downloaded, converted to markdown (either by the primary MCP server we use, [`arxiv-mcp-server`](https://pypi.org/project/arxiv-mcp-server/) or [Docling](https://docling-project.github.io/docling/)), then a report is written about the findings.
+
 ### Creating New Applications
 
 See [How to Create a New Application](#how-to-create-a-new-application) below for the steps required to create a new application. We have plans to add a Legal research application and possibly others soon!
 
 ## Setup
 
-An account with OpenAI or Anthropic is required, or you can use a local inference option like Ollama. Those are the three supported model inference options, currently. See [Usage](#usage) and [Configuration](#configuration) below.
+An account with OpenAI or Anthropic is required, or you can use a local inference option like Ollama with models like `gpt-oss:20b` and `qwen3.5:27b`. Those are the three supported model inference options, currently. See [Usage](#usage) and [Configuration](#configuration) below.
 
 ### Prerequisites
 
 - Python 3.10 or higher
 - [uv](https://docs.astral.sh/uv/) Python package manager, for running the application and some local MCP servers.
-- [npm/npx](https://nodejs.org/en/download) Node package manager, for running some local MCP servers.
-
-If you don't use `uv`, change the commands discussed below, in the other READMEs, in the `Makefile`, and in the `mcp-agent.config*.yaml` files to use your preferred alternative.
+- [npm](https://nodejs.org/en/download) Node package manager, for running some local MCP servers.
 
 ### Installation
 
@@ -93,8 +99,10 @@ Here are the most useful `make` targets:
 | `list-apps`          | List the known applications.     |
 | `app-help-finance`   | Help on the finance application. |
 | `app-help-medical`   | Help on the medical application. |
+| `app-help-arxiv`.    | Help on the arxiv application. |
 | `app-run-finance`    | Run the finance application. Uses META by default. |
 | `app-run-medical`    | Run the medical application. Prompts you for a research query, keywords/terms, and a report title. |
+| `app-run-arxiv`.     | Run the arxiv application. Prompts you for a research query, optional subject(s), and a report title. |
 
 > [!NOTE]
 > For easy demonstration purposes, the apps either have default definitions for their required flags in the `Makefile` or they will prompt you for values. This makes it easy to just try them out. However, the main MCP server used by the medical application has to be installed locally first. See the medical application's [README](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-apps/medical/README.md) for details.
@@ -103,19 +111,31 @@ Here are the most useful `make` targets:
 > 1. Run the command `make -n app-run-APP` for an "`APP`" (e.g., `finance` or `medical`) to see what command would be executed without actually running it.
 > 1. Run the command `make print-info-APP` to see the key `Makefile` variables and their default values for an "`APP`".
 
-The minimum required arguments for the finance application are `--ticker TICKER` and `--company-name COMPANY_NAME`. Default values are defined for them in the `Makefile`. For the medical application, `--query "QUERY"`, `--terms "TERMS" (keywords), and `--report-title TITLE` are required, but the app will prompt you for their values if these arguments are not used or the values supplied are empty. (They are empty in the `Makefile`)
+Let's see how to invoke the applications.
+
+The minimum required arguments for the finance application are `--ticker TICKER` and `--company-name COMPANY_NAME`. Default values are defined for them in the `Makefile`. 
 
 So, for example, here are the shortest `make.sh`, `make` and CLI commands you can run to do financial research on IBM (OpenAI inference will be used):
 
 ```shell
 make.sh --finance --ibm 
 
-make TICKER=IBM COMPANY_NAME="International Business Machines Corporation" app-run-finance
+make TICKER=IBM \
+  COMPANY_NAME="International Business Machines Corporation" \
+  app-run-finance
 
-cd dra-apps && uv run -m finance.main --ticker IBM --company-name "International Business Machines Corporation"
+cd dra-apps && uv run -m finance.main \
+  --ticker IBM \
+  --company-name "International Business Machines Corporation"
 ```
 
-For using the medical research app to research _diabetes mellitus_:
+> [!NOTE]
+> 1. While running the finance application, you may on rare occasions see a browser window pop up asking for permission to authenticate to a financial dataset MCP server. There is no cost to do this. You can authenticate using a `gmail` email address, for example. If you decline, the application will still run, but it may struggle to gather the necessary information it needs without this resource.
+> 2. When using local inference (discussed below), all of the applications can run for a long time, while they tend to complete more quickly when using OpenAI or Anthropic for inference.
+
+For the medical application, `--query "QUERY"`, `--terms "TERMS"` (keywords), and `--report-title TITLE` are required, but the app will prompt you for their values if these arguments are not provided or the values supplied are empty. (They are empty in the `Makefile`)
+
+Here is an example command to research _diabetes mellitus_:
 
 ```shell
 make.sh --medical \
@@ -124,24 +144,42 @@ make.sh --medical \
   --report-title "Diabetes Mellitus"
 
 make QUERY="What are the causes of diabetes mellitus?" \
-    TERMS="diabetes,insulin,pancreas" \
-    REPORT_TITLE="Diabetes Mellitus" \
-    app-run-medical
+  TERMS="diabetes,insulin,pancreas" \
+  REPORT_TITLE="Diabetes Mellitus" \
+  app-run-medical
 
 cd dra-apps && uv run -m medical.main \
-    --query "What are the causes of diabetes mellitus?" \
-    --terms "diabetes,insulin,pancreas" \
-    --report-title "Diabetes Mellitus"
+  --query "What are the causes of diabetes mellitus?" \
+  --terms "diabetes,insulin,pancreas" \
+  --report-title "Diabetes Mellitus"
 ```
 
-> [!NOTE]
-> While running the finance application, you may on rare occasions see a browser window pop up asking for permission to authenticate to a financial dataset MCP server. There is no cost to do this. You can authenticate using a `gmail` email address, for example. If you decline, the application will still run, but it may struggle to gather the necessary information it needs without this resource.
+For the arxiv application, `--query "QUERY"` and `--report-title TITLE` are required, and `--subjects "SUBJECTS" (subject areas defined by ArXiv) is optional. The app will prompt you for their values if these arguments are not provided or the values supplied are empty. (They are empty in the `Makefile`)
+
+Here is an example for researching "synthetic data generation for domain-specific model tuning":
+
+```shell
+make.sh --arxiv \
+  --query "What are the best techniques for generating high-quality, synthetic data for domain-specific tuning of LLMs?" \
+  --subjects "Computer Science" \
+  --report-title "Data Synthesis for Domain-Specific LLM Tuning"
+
+make QUERY="What are the best techniques for generating high-quality, synthetic data for domain-specific tuning of LLMs?" \
+  SUBJECTS= "Computer Science" \
+  REPORT_TITLE= "Data Synthesis for Domain-Specific LLM Tuning" \
+  app-run-arxiv
+
+cd dra-apps && uv run -m arxiv.main \
+  --query "What are the best techniques for generating high-quality, synthetic data for domain-specific tuning of LLMs?" \
+  --subjects "Computer Science" \
+  --report-title "Data Synthesis for Domain-Specific LLM Tuning"
+```
 
 ### Built-in Help
 
 The applications provide many optional CLI options to configure their behaviors. Use the following `make` commands or run the previous CLI commands the `--help` flag.
 
-Let's look at the finance application in some depth. The medical application is similar.
+Let's look at the finance application in some depth. The medical and arxiv applications are similar. Refer to their READMEs ([here](dra-apps/medical/README.md) and [here](dra-apps/arxiv/README.md)) for more details.
 
 ```shell
 $ make app-help-finance
@@ -386,6 +424,9 @@ If you specify a value for either prompt that includes an absolute or relative d
   ...
 ```
 
+> [!WARNING]
+> At this time, the `--research-model` argument is [effectively ignored](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/issues/53), because of the way LLM instantiation is handled in `mcp_agent`. The only way to specify the model you want to use is in the `mcp_agent.config*.yaml` files discussed below!! The rest of this section assumes the `--*model` arguments work.
+
 By default, `gpt-4o` from OpenAI is used for the research _orchestration_ task and `o4-mini` is used for creating an Excel spreadsheet with some of the research results. The latter task doesn't require as powerful a model. If you would like to use a model from another provider, there are several options. Note that inference from OpenAI and Anthropic, and local-serving with ollama are currently the only supported options. (However, at this time, Anthropic support hasn't been tested - help wanted!)
 
 The `--provider` argument is used to ensure that the correct `mcp-agent` code path is followed. The same cod path is used for both OpenAI and for Ollama inference, while a separate code path is used for Anthropic. Note this means that _you must specify both models served by the same provider._ You can't mix and match Anthropic, OpenAI, and ollama models currently.
@@ -473,6 +514,9 @@ Let's begin with inference service configuration.
 
 As discussed above, we currently require several command-line options to specify the models to use and the inference provider. You may also need to edit the `./mcp_agent.config.yaml` files. 
 
+> [!WARNING]
+> Also discussed above is the problem that the `--*model` arguments do _not_ currently work. Hence, you must set the research model you want as the `default_model:` value in the configuration files, as discussed here.
+
 The definitions in our provided configuration files look as follows.
 
 #### OpenAI Inference
@@ -503,11 +547,10 @@ openai:
   api_key: "ignored"
 ```
 
-In our development, we primarily use `gpt-oss:20b` served by Ollama locally. If you use Ollama, you may chose a different default model. Even though the CLI lets you specify the models to use, we have observed that the default model defined here is sometimes used for various tasks, so we recommend changing this value as appropriate, too.
-
+In our development, we primarily use `ollama` serving `gpt-oss:20b` or `qwen3.5:27b`. If you use Ollama, you may chose a different default model. 
 
 > [!NOTE]
-> If you use `ollama` to serve models, pick the largest one that runs on your machine. For example, `gpt-oss:20b` works well, but requires more than 20GB of RAM. Use the same model for both research orchestration and excel spreadsheet generation. For inference through a provider like OpenAI, it makes sense to use a less costly model for the Excel spreadsheet generation step, but for local inference, this is not an issue and it is better to load and use a single model!
+> If you use `ollama` to serve models, pick the largest one that runs on your machine. For example, `gpt-oss:20b` works reasonably well, but requires more than 20GB of RAM. `qwen3.5:27b` requires about 17GB of RAM. Use the same model for both research orchestration and excel spreadsheet generation. For inference through a provider like OpenAI, it makes sense to use a less costly model for the Excel spreadsheet generation step, but for local inference, this is not an issue and it is better to load and use a single model.
 >
 > If you use the `ollama` server app installed on your local machine, open the settings and enable internet access from the model, which is needed to invoke other services to gather financial information! Also select the largest cache size your chosen model(s) support.
 
@@ -632,6 +675,7 @@ See the [MCP Agent Configuration Guide](https://docs.mcp-agent.com/reference/con
 Edit the corresponding `dra-apps/APP/main.py`, i.e.,
 * Finance: [`dra-apps/finance/main.py`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-apps/finance/main.py)
 * Medical: [`dra-apps/medical/main.py`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-apps/medical/main.py)
+* ArXiv: [`dra-apps/arxiv/main.py`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-apps/arxiv/main.py)
 
 Change the list of servers in the function `get_server_list()` near the top of the file. For the finance app, it currently looks like this:
 
@@ -649,7 +693,13 @@ def get_server_list() -> list[str]:
 
 #### Edit the Prompt Template(s)
 
-Optionally, edit the appropriate `*_agent.md` prompt templates in the `dra-apps/APP/templates` directories of your applications (for [finance](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/tree/main/dra-apps/finance/templates) and for [medical](https://github.com/The-AI-Alliance/deep-research-agent-for-medical/tree/main/dra-apps/medical/templates)). There are two things to edit:
+Optionally, edit the appropriate `*_agent.md` prompt templates in the `dra-apps/APP/templates` directories of your applications:
+
+* [Finance](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/tree/main/dra-apps/finance/templates)
+* [Medical](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/tree/main/dra-apps/medical/templates))
+* [ArXiv](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/tree/main/dra-apps/arxiv/templates))
+
+There are two things to edit:
 
 * The list of tools in the YAML header at the top of the file. Only add new tools and services that make sense for that task. **However**, this YAML block is currently _not used for anything_, so this step is unnecessary at this time.
 * Describe in the prompt body how the agent should use the tool or service, including possible performance optimization tips. See, for example, how the main finance deep research prompt, [`dra-apps/finance/templates/financial_research_agent.md`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/tree/main/dra-apps/finance/templates/financial_research_agent.md), provides instructions for tool use.
@@ -682,9 +732,9 @@ See for example the `filesystem` service (for local file access) configured in t
 
 ## How to Create a New Application
 
-With an understanding of the above discussion of the command-line interface (CLI) arguments, the configuration steps, etc., let's now discuss the steps to follow to create a new application, which we followed when we created the medical application.
+With an understanding of the above discussion of the command-line interface (CLI) arguments, the configuration steps, etc., let's now discuss the steps to follow to create a new application, which we followed when we created the medical and arxiv applications.
 
-As an example, let's discuss how to create a history research app. The two hardest tasks of this process are the following:
+As an example, let's discuss how to create a "history" research app. The two hardest tasks of this process are the following:
 
 1. Finding the best, custom data sources, tools, and MCP servers for your use case.
 2. Customizing the prompt(s) to effectively perform the work.
@@ -692,14 +742,14 @@ As an example, let's discuss how to create a history research app. The two harde
 As you go through the following steps, think about these tasks.
 
 > [!NOTE]
-> We will make the core, shared code into a pip-installable library soon. For now, it is necessary to work in a fork of the git repo.
+> While the `dra-app` code is separate from the `dra-core` code in the repository, the `dra-core` code is not yet available as a pypi library (i.e., pip installable). So, you have to build your new application in a fork of this repository. A pypi library is [coming soon](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/issues/44).
 
 ### Create the Corresponding `apps` Directory
 
-We'll copy and edit the finance application. You might find it useful to refer to the medical application, for comparison.
+We'll copy and edit the medical application.
 
-1. Copy `dra-apps/finance` to `dra-apps/history`.
-1. Delete the `__pycache__` directory and any other obvious work files.
+1. Copy `dra-apps/medical` to `dra-apps/history`.
+1. Delete the `__pycache__`, `.hypothesis` and other work directories.
 
 ### Edit `dra-apps/history/main.py`
 
@@ -718,7 +768,7 @@ The next function in `main.py`, `get_extra_observers()` is a "hook" for adding [
 
 #### Decide If You Need a Custom `ParserUtil`
 
-Both the finance and medical applications define custom subclasses of [`ParserUtil`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-core/src/dra/core/common/utils/main.py#L25) in their `main.py` files, `FinanceParserUtil` and `MedicalParserUtil`, respectively. They are used for one purpose, to handle the required arguments where the user will be prompted for values if they aren't supplied through CLI arguments. 
+The existing applications define custom subclasses of [`ParserUtil`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-core/src/dra/core/common/utils/main.py#L25) in their `main.py` files, e.g., [`FinanceParserUtil`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-apps/finance/main.py#L43), [`MedicalParserUtil`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-apps/medical/main.py#L42), and [`ArXivParserUtil`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-apps/arxiv/main.py#L43), respectively. They are used for one purpose, to handle all the required CLI arguments, both common across applications and unique to each one. 
 
 If your application wants to use this feature, follow these examples. Define a subclass of `ParserUtil` and instantiate it inside `define_cli_arguments()`. If you _don't_ need a subclass, just instantiate `ParserUtil` inside `define_cli_arguments()`.
 
@@ -729,9 +779,9 @@ The next function `define_cli_arguments()` is where the CLI arguments are specif
 There are common CLI arguments, which are included with calls like `parser_util.add_arg_output_dir()` (around line 100) in `main.py`, which adds the root output directory for all generated content. You will most likely want to keep all the common CLI arguments in `main.py`. However, the order in which the arguments are setup in this function is done to group help information logically. Put the required arguments before the optional arguments. 
 
 > [!TIP]
-> Run `make app-help-finance` to see how its CLI argument definitions are reflected in the finance app's CLI.
+> Run `make app-help-medical` to see how its CLI argument definitions are reflected in the application's CLI.
 
-Next decide which custom CLI arguments are required for your application. For example, the finance application has required `--ticket TICKET` and `--company-name COMPANY_NAME` CLI arguments, while the medical application has a required `--query QUERY` CLI argument. There are other custom arguments for each application, such as unique flags for the prompt templates, but they have suitable default values. 
+Next decide which custom CLI arguments are required for your application. For example, the medical application has required `--query QUERY`, `--terms TERMS`, and `--report-title "REPORT_TITLE"` CLI arguments, plus a custom name for the research prompt template file, `--medical-research-prompt-path PATH`. A suitable default value is used for the template file argument, but for the other three, the user will be prompted for the values if they aren't provided on invocation.
 
 Start by editing the `def_*` variables near the top of the function. They define default values for your custom CLI arguments. Obviously delete the old definitions for the finance application that don't apply to your use case.
 
@@ -739,20 +789,20 @@ Next edit the definitions of `which_app` (use `history` in this example), `app_n
 
 Then edit the sequence of statements to add CLI arguments, including your custom arguments. (We use Python's [`argparse`](https://docs.python.org/3/library/argparse.html#module-argparse) module inside `ParserUtil`.)
 
-Here is an example of how to add your custom argument definitions, the `--ticker TICKER` argument in the finance application:
+Here is an example of how to add a custom argument definitions, the `--query "QUERY"` argument in the medical application:
 
 ```python
     parser_util.parser.add_argument(
-        "--ticker",
-        help="Stock ticker symbol, e.g., META, AAPL, GOOGL, etc. If not provided..."
+        "-q", "--query",
+        help=f"A quoted string with your research query. If not provided on the command line, you will be prompted for it."
     )
 ```
 
-Note this argument is _required_, but we _don't_ use the `required=True` flag. Instead the `FinanceParserUtils` checks if the user provided a ticket and if not, the user is prompted for it.
+While this argument is _required_, we _don't_ use the `required=True` flag. Instead the `MedicalParserUtils` checks if the user provided a query and if not, the user is prompted for it.
 
-Put required arguments like this one at the beginning of your arguments, so they show up first in the help message. For the finance application, `--company-name` is also required and it also handled with user prompting, if needed.
+Put required arguments like this one at the beginning of your arguments, so they show up first in the help message. 
 
-The finance application `define_cli_arguments()` also adds custom arguments for the output spreadsheet and the two prompt files needed by the finance application. They correspond to the two "tasks" that are executed (discussed below). Consider meaningful argument names and values for the prompt files you'll use. 
+Each application's `define_cli_arguments()` also adds other custom arguments.
 
 #### Process Custom Input and Output Paths
 
@@ -781,13 +831,13 @@ After constructing the list, `create_variables()` returns a dictionary where the
 
 Next, `make_tasks()` defines the research tasks. All applications will need the first [`GenerateTask`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-core/src/dra/core/common/tasks.py) shown, which drives the `mcp-agent` `DeepOrchestrator`. 
 
-The finance application has a second [`AgentTask`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-core/src/dra/core/common/tasks.py) that generates an Excel spreadsheet with results. 
+Currently, only the finance application has a second [`AgentTask`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-core/src/dra/core/common/tasks.py), which is used to generate an Excel spreadsheet with results. 
 
-Your application may only need the `GenerateTask`, but the hooks are here for more advanced uses.
+Your application may only need the `GenerateTask`, but the hooks are here for more complex flows.
 
-Each prompt will have a prompt template file in `dra-apps/history/templates`. We discuss editing them next.
+Each prompt will have a corresponding prompt template file in `dra-apps/history/templates`. We discuss editing them next.
 
-The bottom of `main.py` calls these functions and constructs a [`Runner`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-core/src/dra/core/common/utils/main.py) instance, which does final component initialization and then the application is executed!
+The bottom of `main.py` calls the functions described above and constructs a [`Runner`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-core/src/dra/core/common/utils/main.py) instance, which does final component initialization and then the executes the application!
 
 #### Edit the Prompt Template(s)
 
@@ -797,37 +847,42 @@ Previously we said you need to define the CLI arguments for your prompt template
 
 We say _templates_, because you will find "variables" defined in the files like this: `{{key}}`, where `key` is expected to be found in the `Variables` dictionary discussed above. Hence, you will want to define any variables in the `create_variables()` function that you will need replaced in the prompts at runtime.
 
+> [!TIP]
+> Part of the power of MCP and agent frameworks, like `mcp-agent`, is their combined ability to figure out how to invoke an MCP server or tool to get the information needed. Hence, be careful about providing _too_ much guidance in the prompt file about how to use the tools and servers.
+
 ### Edit the `mcp_agent.config*.yaml` Files
 
-You may have already done this in the step above to define the servers you need, but make sure no additional changes are required. For example, you might want to change the default models used for the inference providers defined.
+You may have already done this in the step above to define the MCP servers you need, but make sure no additional changes are required. For example, you might want to change the default models used for the inference providers defined.
 
 ### Add your Application to the Makefile
 
-Currently the `Makefile` knows about the two applications for `finance` and `medical`. For example, the following convenient make targets are there:
+Currently the `Makefile` knows about the three applications: `finance`, `medical`, and `arxiv`. For example, the following convenient make targets are there:
 
 | Make Target          | Description                     |
 | :------------------- | :------------------------------ |
 | `list-apps`          | List the known applications     |
 | `app-help-finance`   | Help on the finance application |
 | `app-help-medical`   | Help on the medical application |
+| `app-help-arxiv`     | Help on the arxiv application   |
 | `app-run-finance`    | Run the finance application     |
 | `app-run-medical`    | Run the medical application     |
+| `app-run-arxiv`      | Run the arxiv application       |
 
 > [!NOTE]
-> For easy demonstration purposes, both apps have default definitions for their required flags in the `Makefile`, so you can just build these targets to see them run. 
+> For easy demonstration purposes, the apps have default definitions for their required flags in the `Makefile` or the user will be prompted for values.
 
 Make the following changes to add support for the history application:
 
 * Define `HISTORY_APP` and add it to the definition of `APPS`.
-* Find the `# For the Finance app:` section and add a new one below it for the history application. Define any custom variables and values that will be use for running the command with your preferred CLI arguments. See also how the medical application definitions are handled for the _query_ and _terms_. Make variables `QUERY` and `TERMS` are referenced in the command below, but _not defined_ in the `Makefile`, so they are effectively "", unless defined when `make` is invoked. 
+* Find the `# For the Medical app:` section and add a new one below it for the history application. Define any custom variables and values that will be use for running the command with your preferred CLI arguments. See also how the medical application definitions are handled for the _query_ and _terms_. Make variables `QUERY` and `TERMS` are referenced in the command below, but they are _not_ defined in the `Makefile`, making them effectively "", unless defined on the command line when `make` is invoked. 
 * In `# For all apps:` add a new `else ifeq...` clause, or just rely on the default `else` definition:
 
 ```
 else ifeq (history,${APP})
-  OUTPUT_DIR              ?= ../output/${APP}/something
+  OUTPUT_DIR              ?= output/${APP}/something
   OUTPUT_REPORT           ?= something_report.md
 ```
-* In `# Application-specific run commands:` copy and paste the `do-app-run-finance` definition, rename it to `do-app-run-history` and edit the command as desired.
+* In `# Application-specific run commands:` copy and paste the `do-app-run-medical` definition, rename it to `do-app-run-history` and edit the command as desired.
 
 Check that the following commands work:
 
@@ -844,7 +899,7 @@ Of course, don't forget to save your work in git...
 
 ### Submit a PR?
 
-Consider contributing your application back to the project! The next section discusses getting involved.
+Consider contributing your application back to the project! [Contributing to This Project](#contributing-to-this-project) below discusses getting involved.
 
 ## Debugging Tips
 
