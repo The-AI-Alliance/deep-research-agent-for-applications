@@ -5,7 +5,8 @@
 
 OPENAI_RESEARCH_MODEL="gpt-4o"
 OPENAI_EXCEL_WRITER_MODEL="o4-mini"
-OLLAMA_RESEARCH_MODEL="gpt-oss:20b"
+#OLLAMA_RESEARCH_MODEL="gpt-oss:20b"
+OLLAMA_RESEARCH_MODEL="qwen3.5:27b"
 # When running with Ollama, there is less need to run a low-cost model 
 # for the Excel spreadsheet generation task, and keeping the same model
 # in memory saves time.

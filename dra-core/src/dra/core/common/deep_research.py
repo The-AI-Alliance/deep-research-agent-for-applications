@@ -47,6 +47,7 @@ class DeepResearch():
             variables: dict[str, Variable]):
         self.app_name = app_name
         self.provider = provider
+        self.research_model = variables.get('research_model')
         self.config = config
         self.tasks = tasks
         self.output_dir_path = variables['output_dir_path'].value
@@ -54,8 +55,12 @@ class DeepResearch():
         self.observers = observers
         self.variables = variables
 
-        # from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
-        # self.llm_factory = OpenAIAugmentedLLM
+        # TODO: https://github.com/The-AI-Alliance/deep-research-agent-for-applications/issues/53
+        # When the "factory" is actually used, it doesn't appear to read any of the configurations
+        # we define that specify the model. It only uses whatever is set as `default_model` in
+        # in the `mcp_agent.config*.yaml` files, even though there is logic in mcp_agent
+        # to look for a `default_model` kwarg, it doesn't appear to be used anywhere that matters
+        # to us!!
         self.llm_factory = None
         match self.provider:
             case 'anthropic':

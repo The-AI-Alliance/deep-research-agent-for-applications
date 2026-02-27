@@ -252,6 +252,7 @@ setup-output-dir::
 after-app-run:: show-output-files
 
 # Application-specific run commands:
+
 do-app-run-finance::
 	cd ${APPS_DIR} && uv run -m ${APP_MODULE} \
 		--ticker "${TICKER}" \

@@ -34,7 +34,7 @@ mcp:
 # here is actually for inference through ollama.
 # Change the default model if you prefer to use another one.
 openai:
-  default_model: "gpt-oss:20b"
+  default_model: "qwen3.5:27b"
   reasoning_effort: "medium"
   base_url: "http://localhost:11434/v1"
   api_key: "ignored"
