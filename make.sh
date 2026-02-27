@@ -42,7 +42,6 @@ For the medical and arxiv app:
 --short | --short-run
                   Do a short run (low "max values" for testing)
 --noop            Just print the command that will be executed, but don't run it.
---debug           Use the debug versions of the mcp-agent config files and other debug features.
 
 All other arguments passed to make. So for example, to see what command make will
 run without running it, pass "-n".
@@ -65,11 +64,6 @@ do
 		;;
 	--noop)
 		NOOP=echo
-		;;
-	--debug)
-		vars+=(
-			DEBUG=true
-		)
 		;;
 	--short|--short-run)
 		vars+=(

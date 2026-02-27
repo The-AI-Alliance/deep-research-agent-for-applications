@@ -72,14 +72,13 @@ class ParserUtil():
             k = key.replace('--', '').replace('_', '-')
             return self.defaults.get(k)
 
-    # TODO: In fact, we never call this with a provider or true `debug` argument.
-    # Instead, we handle these variations in the Makefile and the value it passes for
-    # `--mcp-agent-config`. We should either remove the extra logic here or implement
-    # real support for it with a new `--debug` flag for the CLI.
-    def make_def_mcp_agent_config_path(self, provider: str = None, debug: bool = False) -> str:
+    # TODO: In fact, we never call this with a `provider` argument.
+    # Instead, we handle the provider-based variations in the Makefile and the value 
+    # it passes for `--mcp-agent-config`. We should either remove the extra logic here
+    # or use it more effectively.
+    def make_def_mcp_agent_config_path(self, provider: str = None) -> str:
         pstr = '.ollama' if provider == 'ollama' else ''
-        dstr = '.debug'  if debug else ''
-        return f"dra/apps/{self.which_app}/config/mcp_agent.config{pstr}{dstr}.yaml"
+        return f"dra/apps/{self.which_app}/config/mcp_agent.config{pstr}.yaml"
 
     def relative_to(self, rw: str, where: str) -> str:
         return f"If the path doesn't contain a directory prefix, then the file will be {rw} in the directory given by '--{where}'."

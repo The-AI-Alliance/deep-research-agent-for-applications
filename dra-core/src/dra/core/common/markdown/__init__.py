@@ -489,7 +489,12 @@ class MarkdownObserver(Observer[DeepResearch]):
             table = MarkdownTable(title=f"✉️ OpenAI/Ollama Reply Message #{message_index}: Metadata",
                 columns = [('Item', 'left'), ('Value', 'left')])
             for key, value in ccm.to_dict().items():
-                table.add_row([key, str(value)])
+                v = str(value)
+                if key == content:
+                    v2 = v if len(v) <= 100 else f"{v[:50]} ... {v[-50:]}"
+                    lines = v2.split("\n")
+                    lines2, is_markdown = self.__handle_content(lines)
+                table.add_row([key, f"`{'\n'.join(lines2)}`"])
             return table
 
         sobj = str(obj)
@@ -498,21 +503,26 @@ class MarkdownObserver(Observer[DeepResearch]):
 
         if isinstance(obj, ChatCompletionMessage):
             ccm: ChatCompletionMessage = cast(ChatCompletionMessage, obj)
-            content = ccm.content.split('\n') if ccm.content else []
+            content = []
+            if ccm.content:
+                content, is_markdown = self.__handle_content(ccm.content.split('\n'))
+                if not is_markdown:
+                    content = [f"> {line}" for line in content]
             metadata_table = make_metadata_table_from_dict(ccm)
+
         elif sobj.startswith("ChatCompletion"):
             # Is it a "str(ChatCompletion...)"? Try parsing it with the following
             #  _ugly_ hack to extract just the `content` from the string:
             try:
                 s2 = re.sub(r"""ChatCompletion[^=]+\s*=\s*['"]?""", '', sobj)
                 s3 = re.sub(r"""['"]?,\s*refusal\s*=.*$""", '', s2)
-                content = s3.split('\n')
+                content = [f"> {line}" for line in s3.split('\n')]
             except:  # bail out...
-                content = sobj.split('\n')
+                content = [f"> {line}" for line in sobj.split('\n')]
           
         all_content: list[any] = []
         if content:
-            all_content = [f"✉️ Reply Message #{message_index} Content:"]
+            all_content = ['\n', f"✉️ Reply Message #{message_index} Content:", '\n']
             all_content.extend(content)
             all_content.extend(['\n', "(end content)"])
         if metadata_table:
@@ -531,6 +541,7 @@ class MarkdownObserver(Observer[DeepResearch]):
             session_id: str,
             total_cost_usd: float | None = None,
             usage: dict[str, any] | None = None, 
+            result: any = None,
             structured_output: any = None) -> MarkdownTable:
             table = MarkdownTable(title=f"✉️ Anthropic Reply Message #{message_index}: Metadata",
                 columns = [('Item', 'left'), ('Value', 'right')])
@@ -543,7 +554,8 @@ class MarkdownObserver(Observer[DeepResearch]):
             table.add_row(['total_cost_usd', str(total_cost_usd)])
             table.add_row(['usage', str(usage)])
             table.add_row(['total_cost_usd', str(total_cost_usd)])
-            table.add_row(['structured_output', str(structured_output)])
+            table.add_row(['result', str(result)[0:100] + ' ...'])
+            table.add_row(['structured_output', str(structured_output)[0:100] + ' ...'])
             return table
 
         sobj = str(obj)
@@ -553,6 +565,9 @@ class MarkdownObserver(Observer[DeepResearch]):
         if isinstance(obj, Message):
             rm: Message = cast(Message, obj)
             content = rm.result.split('\n')
+            content, is_markdown = self.__handle_content(rm.result.split('\n'))
+            if not is_markdown:
+                content = [f"> {line}" for line in content]
             metadata_table = make_metadata_table(
                 subtype = rm.subtype,
                 duration_ms = rm.duration_ms,
@@ -577,7 +592,7 @@ class MarkdownObserver(Observer[DeepResearch]):
 
         all_content: list[any] = []
         if content:
-            all_content = [f"**Message #{message_index} content:**"]
+            all_content = ['\n', f"**Reply Message #{message_index} Result:**", '\n']
             all_content.extend(content)
             all_content.extend(['\n', "(end content)"])
         if metadata_table:
@@ -585,6 +600,24 @@ class MarkdownObserver(Observer[DeepResearch]):
             all_content.append(metadata_table)
 
         return all_content
+
+    def __handle_content(self, content: list[any]) -> (list[str], bool)
+        """
+        What we hope is that the content returned by messages is Markdown, 
+        e.g., "[```markdown", "...", "```"]. If so, we remove the leading and
+        trailing "delimiter" lines and return a new list with the `bool` flag `True`,
+        meaning Markdown was found. Otherwise, the list is return unchanged along 
+        with the `bool` flag `False`.
+        """
+        result = []
+        is_md = False
+        for line in content:
+            if re.match(r'^\s*```(markdown|md)\s*$', line):
+                is_md = true
+            elif not re.match(r'^\s*```\s*$', '', line):
+                result.append(line)
+        return result, is_md
+
 
     def __make_task_results_section(self, task_number: int, task: BaseTask) -> MarkdownSection:
         task_table = MarkdownTable(
@@ -604,18 +637,15 @@ class MarkdownObserver(Observer[DeepResearch]):
 
         subsections: list[MarkdownSection] = []
         for i in range(len(task.result)):
-            content: list[any] = []
             result = task.result[i]
-            result_content = self.__parse_openai_message(i+1, result)
-            if not result_content:
-                result_content = self.__parse_anthropic_message(i+1, result)
-                if not result_content:
+            content = self.__parse_openai_message(i+1, result)
+            if not content:
+                content = self.__parse_anthropic_message(i+1, result)
+                if not content:
                     # Try parsing as JSON, although it probably isn't JSON...
-                    (err_msg, result_content) = self.__parse_json(str(result))
-                    if not result_content: # not JSON, so just split the text.
-                        result_content = str(result).split('\n')
-
-            content.extend([f"> {line}" for line in result_content])
+                    (err_msg, content) = self.__parse_json(str(result))
+                    if not content: # not JSON, so just split the text.
+                        content = str(result).split('\n')
 
             ss = MarkdownSection(title=f"✉️ Reply Message #{i+1}", content=content)
             subsections.append(ss)

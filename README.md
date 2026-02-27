@@ -392,9 +392,6 @@ The `--provider` argument is used to ensure that the correct `mcp-agent` code pa
 
 The `--mcp-agent-config` points to the correct `mcp-agent` configuration file to use, based on the `--provider` value. The example shown works for both OpenAI and Anthropic inference. If you use Ollama inference, the `Makefile` will construct this argument to be `dra/apps/finance/config/mcp_agent.config.ollama.yaml`. This is necessary because different settings have to be provided for the OpenAI code path in `mcp-agent`, compared to _actual_ OpenAI inference.
 
-Also, if you invoke `make` with `DEBUG=true` (or any non-empty value), it will instead use a `*.debug.yaml` version of the configuration file, which configures all the MCP servers to use any debug flags, extra logging, inspectors, etc. they support. Not all the config files have debug equivalents.
-See [`dra-apps/medical/config/mcp_agent.config.ollama.debug.yaml`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-apps/medical/config/mcp_agent.config.ollama.debug.yaml) for one example, where the server configurations could be copied to other config files, as desired.
-
 See [Configuration](#configuration) and [Edit `mcp_agent.config*.yaml`](#edit-mcp-agent-config-yaml) below for more details on these YAML files.
 
 The rest of this group of arguments fine tune inference calls and budgeting. If you use OpenAI or Anthropic, you might wish to use small `--max-*` values in some cases.
@@ -421,7 +418,7 @@ For these arguments, passing values less than zero will be reset to "reasonable"
 ...
 ```
 
-The `--verbose` option (used by default in the `make app-run` command), just prints some extra information at the beginning of execution and in a few other places. It doesn't affect logging, which uses `DEBUG` and can be changed in the `mcp_agent.config.yaml` files discussed previously.
+The `--verbose` option (used by default in the `make app-run` command), just prints some extra information at the beginning of execution and in a few other places. It doesn't affect logging, which uses `DEBUG` as the threshold level. That value can be changed in the `mcp_agent.config.yaml` files discussed previously.
 
 A [Rich console UI](https://rich.readthedocs.io/en/stable/introduction.html) is used to show progress and final results. 
 
@@ -519,10 +516,6 @@ For more details on configuring different providers that `mcp-agent` supports:
 - [Ollama](https://github.com/lastmile-ai/mcp-agent/tree/main/examples/model_providers/mcp_basic_ollama_agent)
 - [Gemini](https://github.com/lastmile-ai/mcp-agent/tree/main/examples/model_providers/mcp_basic_google_agent)
 - [All supported providers](https://github.com/lastmile-ai/mcp-agent/tree/main/examples/model_providers/)
-
-#### Debug Variants
-
-Finally, each of the above YAML files for each application have `mcp_agent.config*.debug.yaml` variants, where extra debugging flags are added to the server configurations. They are used if you invoke the make `run` targets as follows: `make DEBUG=true app-run-<APP>`.
 
 ### Setting Up Secrets
 
@@ -632,7 +625,6 @@ For example, `mcp-remote` allows you to customize the HTTP headers, so you can p
 See the [MCP Agent Configuration Guide](https://docs.mcp-agent.com/reference/configuration) for more details on configuring external servers. See [CONTEXT_FORGE_MIGRATION.md](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/CONTEXT_FORGE_MIGRATION.md) for an example of how to configure services that are accessed through a gateway, in this case [IBM Context Forge](https://ibm.github.io/mcp-context-forge/).
 
 > [!TIP]
-> Some of the config files have "debug" versions, e.g., [`dra-apps/medical/config/mcp_agent.config.ollama.debug.yaml`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-apps/medical/config/mcp_agent.config.ollama.debug.yaml). These versions add debugging flags and other tools for additional logging and troubleshooting. Those tools include `@modelcontextprotocol/inspector`, which will pop up a GUI for interacting with the services it is "inspecting". 
 > See the [Debugging Tips](#debugging-tips) below for more details.
 
 #### Edit the `main.py` for the Application
@@ -864,9 +856,9 @@ Here are some tips:
   * For example, for a while we couldn't figure out why the Excel spreadsheet wasn't created in the finance app, even though the research task appeared successful otherwise. In the logs we found a message that the `excel_writer` server requires an absolute path for the output file.
 * Some of the tools also write log files elsewhere, e.g., `$HOME/.mcp-auth/mcp-remote-*/`. 
 * Study the output in the Markdown report. We decided to print a lot of details in the report about messages received back from MCP tool calls, configuration settings, etc., even though a lot of this information just creates clutter when the job is successful; you have to find the useful output for your research task. We will improve this output over time, but for now, it has been helpful to have this output as a complement to the log files.
-* Some of the MCP servers and tools have debugging flags you can use. See the tool and server documentation links in the `mcp_agent.config.yaml` [discussion above](#edit-mcp-agent-config-yaml) for details.
-  * Also discussed there, we have provided variants of some of the config files with these debug configurations enabled, e.g., [`dra-apps/medical/config/mcp_agent.config.ollama.debug.yaml`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-apps/medical/config/mcp_agent.config.ollama.debug.yaml). Added are debugging flags and other tools for additional logging and troubleshooting. You trigger the use of these versions by invoking `make DEBUG=true target`. (The value passed for `DEBUG` can be any non-empty string.)
-  * See in particular the [documentation](https://www.npmjs.com/package/mcp-remote) for the `mcp-remote` server proxy that we use. There are lots of configuration flags, most of which are not specific to debugging, but some of which might provide more robust results in your application.
+* Some of the MCP servers and tools have debugging flags you can use in the `mcp_agent.config*.yaml` configuration files. See the tool and server documentation links in the `mcp_agent.config.yaml` [discussion above](#edit-mcp-agent-config-yaml) for details.
+  * E.g., see the `mcp-remote` [documentation](https://www.npmjs.com/package/mcp-remote), a server proxy that we use. There are lots of configuration flags, most of which are not specific to debugging, but some of which might provide more robust results in your application.
+  * The `node` app [`@modelcontextprotocol/inspector`](https://modelcontextprotocol.io/docs/tools/inspector) can be used to run MCP servers with a graphical inspection tool. For example, normally you would run `mcp-server-fetch` with the command `uvx mcp-server-fetch`. To use the inspector, you would invoke it with `npx -y @modelcontextprotocol/inspector uvx mcp-server-fetch`.
 * The `Makefile` passes the `--verbose` argument, by default, which adds some extra output.
 
 ## Contributing to This Project

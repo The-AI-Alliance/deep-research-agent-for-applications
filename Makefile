@@ -59,9 +59,6 @@ ARXIV_RESEARCH_PROMPT_FILE   ?= arxiv_research_agent.md
 
 # For all apps:
 
-# Use a non-empty value for DEBUG to enable debug flags for MCP servers:
-DEBUG                      ?= 
-
 # Relative directory paths are relative to ${APPS_DIR}:
 ifeq (finance,${APP})
 	OUTPUT_DIR              ?= output/${APP}/${TICKER}
@@ -89,15 +86,10 @@ INFERENCE_PROVIDER         ?= openai
 TEMPLATES_DIR              ?= ${APP}/templates
 MARKDOWN_YAML_HEADER_FILE  ?= github_pages_header.yaml
 
-ifeq (,${DEBUG})
-	DEBUG_FILE = 
-else
-	DEBUG_FILE = .debug
-endif
 ifeq (ollama,${INFERENCE_PROVIDER})
-	MCP_AGENT_CONFIG_FILE    ?= ${APP}/config/mcp_agent.config.${INFERENCE_PROVIDER}${DEBUG_FILE}.yaml
+	MCP_AGENT_CONFIG_FILE    ?= ${APP}/config/mcp_agent.config.${INFERENCE_PROVIDER}.yaml
 else
-	MCP_AGENT_CONFIG_FILE    ?= ${APP}/config/mcp_agent.config${DEBUG_FILE}.yaml
+	MCP_AGENT_CONFIG_FILE    ?= ${APP}/config/mcp_agent.config.yaml
 endif
 TEMPERATURE                ?= 0.7
 MAX_ITERATIONS             ?= 25
