@@ -19,9 +19,9 @@ mcp:
     fetch:
       command: "uvx"
       args: ["mcp-server-fetch"]
-    # yfmcp:
-    #   command: "uvx"
-    #   args: ["yfmcp@latest"]
+    yfmcp:
+      command: "uvx"
+      args: ["yfmcp@latest"]
     financial-datasets:
       command: "npx"
       args: ["-y", "mcp-remote", "https://mcp.financialdatasets.ai/mcp"]
