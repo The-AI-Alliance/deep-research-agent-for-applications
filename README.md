@@ -50,7 +50,9 @@ See also the application's [README](https://github.com/The-AI-Alliance/deep-rese
 
 ### ArXiv
 
-This application focuses on finding papers hosted at [ArXiv](https://arxiv.org) that relate to a user query, such as recent progress in various aspects of AI. Papers are downloaded, converted to markdown (either by the primary MCP server we use, [`arxiv-mcp-server`](https://pypi.org/project/arxiv-mcp-server/) or [Docling](https://docling-project.github.io/docling/)), then a report is written about the findings.
+This application focuses on finding papers hosted at [ArXiv](https://arxiv.org) that relate to a user query, such as recent progress in various aspects of AI. The specialized MCP server [`arxiv-mcp-server`](https://pypi.org/project/arxiv-mcp-server/) is used. Interesting papers are downloaded, analyzed, and a report is written about the findings.
+
+Optionally, [Docling](https://docling-project.github.io/docling/)) can be used to parse documents into a more readable form, like Markdown.
 
 ### Creating New Applications
 
