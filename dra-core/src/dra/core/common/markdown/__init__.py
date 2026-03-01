@@ -433,6 +433,11 @@ class MarkdownObserver(Observer[DeepResearch]):
             if log_failure:
                 self.system.logger.warning(f"{err_msg}: input = {s}")
             return (err_msg, None)
+        except Exception as err:
+            err_msg = f"{err} of type {type(err)} raised while parsing attempting to parse {context} results."
+            if log_failure:
+                self.system.logger.warning(f"{err_msg}: input = {s}")
+            return (err_msg, None)
 
     def __make_layout(self, title: str) -> MarkdownSection:
         layout = MarkdownSection(title=title)
@@ -564,8 +569,7 @@ class MarkdownObserver(Observer[DeepResearch]):
 
         if isinstance(obj, Message):
             rm: Message = cast(Message, obj)
-            content = rm.result.split('\n')
-            content, is_markdown = self.__handle_content(rm.result.split('\n'))
+            content, is_markdown = self.__handle_content(str(rm.result).split('\n'))
             if not is_markdown:
                 content = [f"> {line}" for line in content]
             metadata_table = make_metadata_table(
@@ -611,11 +615,16 @@ class MarkdownObserver(Observer[DeepResearch]):
         """
         result = []
         is_md = False
-        for line in content:
-            if re.match(r'^\s*```(markdown|md)\s*$', line):
-                is_md = true
-            elif not re.match(r'^\s*```\s*$', '', line):
-                result.append(line)
+        try:
+            for line in content:
+                if re.match(r'^\s*```(markdown|md)\s*$', line):
+                    is_md = true
+                elif not re.match(r'^\s*```\s*$', '', line):
+                    result.append(line)
+        except:
+            self.system.logger.error("Parsing out markdown failed! {content}")
+            result = content
+            is_md = False
         return result, is_md
 
 
@@ -631,7 +640,7 @@ class MarkdownObserver(Observer[DeepResearch]):
             content=[f"Information for task: {task.name}", task_table])
         
         if not task.result:
-            error_str = f"> **ERROR:** No {task.name} results! See the log file for details."
+            error_str = f"> **NOTE:** No {task.name} results! See the log file for details."
             result_section.add_intro_content([error_str])
             return result_section
 

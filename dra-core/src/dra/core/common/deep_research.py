@@ -192,7 +192,7 @@ class DeepResearch():
         prompt_variables = dict([(v.key, v.value) for v in self.variables.values()])
         prompt_variables['previous_tasks_results'] = previous_tasks_results
         for task in self.tasks:
-            status, result = await task.run(self.orchestrator, self.logger, **prompt_variables)            
+            status, result = await task.run(self.orchestrator, self.logger, **prompt_variables)
             previous_tasks_results = f"{previous_tasks_results}\ntask {task.name} result:\n{result}\n"
             prompt_variables['previous_tasks_results'] = previous_tasks_results
             self.__save_task_raw_result(task.name, result)
