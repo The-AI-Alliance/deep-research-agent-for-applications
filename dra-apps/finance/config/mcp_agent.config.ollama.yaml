@@ -10,7 +10,7 @@ logger:
   progress_display: true
   path_settings:
     # Logs rel
-    path_pattern: "../logs/deep-research-agent-{unique_id}.jsonl"
+    path_pattern: "../logs/finance/deep-research-agent-{unique_id}.jsonl"
     unique_id: "timestamp" # Options: "timestamp" or "session_id"
     timestamp_format: "%Y%m%d_%H%M%S"
 
