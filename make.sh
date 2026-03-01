@@ -3,10 +3,13 @@
 # A helper script for running the applications with several variants
 # for the optional arguments.
 
+# WARNING: At this time, these model definitions actually don't work. You have
+# to set the "default_model" in the mcp_agent.config.yaml (when using OpenAI or
+# Anthropic) or mcp_agent.config.ollama.yaml (when using ollama).
 OPENAI_RESEARCH_MODEL="gpt-4o"
 OPENAI_EXCEL_WRITER_MODEL="o4-mini"
-#OLLAMA_RESEARCH_MODEL="gpt-oss:20b"
-OLLAMA_RESEARCH_MODEL="qwen3.5:27b"
+OLLAMA_RESEARCH_MODEL="gpt-oss:20b"
+#OLLAMA_RESEARCH_MODEL="qwen3.5:27b"
 # When running with Ollama, there is less need to run a low-cost model 
 # for the Excel spreadsheet generation task, and keeping the same model
 # in memory saves time.
