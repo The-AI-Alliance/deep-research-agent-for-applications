@@ -24,9 +24,10 @@ Where the options are:
 --medical         Run the medical app
 --arxiv           Run the arxiv app
 
-For the finance app:
---ibm             Generate research for IBM  (ignored if not running the finance app)
---meta            Generate research for Meta (ignored if not running the finance app)
+For the finance app: These flags are ignored if not running the finance app.
+--apple           Research on Apple
+--ibm             Research on IBM  
+--meta            Research on Meta
 
 For the medical and arxiv app:
 --query  "QUERY"  Use this query (ignored if not running the medical app)
@@ -104,6 +105,12 @@ do
 			RESEARCH_MODEL="$OPENAI_RESEARCH_MODEL"
 			EXCEL_WRITER_MODEL="$OPENAI_EXCEL_WRITER_MODEL"
 			INFERENCE_PROVIDER="openai"
+		)
+		;;
+	--apple)
+		vars+=(
+			TICKER="AAPL" 
+			COMPANY_NAME="Apple Inc."
 		)
 		;;
 	--ibm)
