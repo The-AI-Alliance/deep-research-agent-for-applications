@@ -24,7 +24,7 @@ from dra.core.common.tasks import BaseTask, GenerateTask, AgentTask, TaskStatus
 from dra.core.common.utils.strings import MarkdownUtil, clean_json_string, replace_variables
 from dra.core.common.variables import Variable, VariableFormat
 
-from dra.core.common.markdown.elements import (
+from dra.core.ux.markdown.elements import (
     MarkdownElement,
     MarkdownSection,
     MarkdownTable,

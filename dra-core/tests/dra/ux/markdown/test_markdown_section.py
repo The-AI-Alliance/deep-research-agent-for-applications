@@ -6,9 +6,9 @@ import unittest
 from pathlib import Path
 import os, re, sys
 
-from dra.core.common.markdown.elements import MarkdownElement, MarkdownSection
 
 from dra.core.common.utils.strings import to_id
+from dra.core.ux.markdown.elements import MarkdownElement, MarkdownSection
 
 from tests.dra.utils import no_linefeeds_text, no_linefeeds_nonempty_text
 

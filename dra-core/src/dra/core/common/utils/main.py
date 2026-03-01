@@ -12,7 +12,6 @@ from typing import Callable
 from mcp_agent.workflows.deep_orchestrator.config import DeepOrchestratorConfig
 
 from dra.core.common.deep_research import DeepResearch
-from dra.core.common.markdown import MarkdownObserver
 from dra.core.common.observer import Observer, Observers
 from dra.core.common.tasks import BaseTask
 from dra.core.common.utils.io import UserPrompts
@@ -20,6 +19,7 @@ from dra.core.common.utils.paths import resolve_path, resolve_and_require_path
 from dra.core.common.variables import Variable
 
 from dra.core.ux.display import Display
+from dra.core.ux.markdown import MarkdownObserver
 from dra.core.ux.rich import RichDisplay
 
 class ParserUtil():

@@ -20,7 +20,7 @@ def no_linefeeds_text(test_strategy = st.text, min_size=0, max_size=None):
     return test_strategy(min_size=min_size, max_size=max_size).map(lambda s: re.sub('[\n\r]', '_', s))
 
 def no_slash_text(test_strategy = st.text, min_size=0, max_size=None):
-    return test_strategy().map(lambda s: re.sub('/', '_', s))
+    return test_strategy(min_size=min_size, max_size=max_size).map(lambda s: re.sub('/', '_', s))
 
 # Versions that return non-empty texts:
 
@@ -34,20 +34,20 @@ def no_linefeeds_nonempty_text(min_size=1, max_size=None):
 def no_slash_nonempty_text(min_size=0, max_size=None):
     return nonempty_text(test_strategy=no_slash_text, min_size=min_size, max_size=max_size)
 
-def parent_path_text(min_size=1, max_size=5):
-    return st.lists(
-        no_slash_nonempty_text(min_size=min_size, max_size=max_size), 
-        min_size=min_size, max_size=max_size).map(
-            lambda parents: os.path.join(*parents))
-
 def no_leading_dots(min_size=1, max_size=5):
     """
     If the file part generated is `.` or `..`, then Path will resolve it to
     the current directory or the parent directory, respectively, which
     is not what we want.
     """
-    return no_slash_nonempty_text().map(
-        lambda s: f"_{s}" if s == '.' or s == '..' else s)
+    return no_slash_nonempty_text(min_size=min_size, max_size=max_size).map(
+        lambda s: f"_{s}" if s.startswith('.') else s)
+
+def parent_path_text(min_size=1, max_size=5):
+    return st.lists(
+        no_leading_dots(min_size=min_size, max_size=max_size), 
+        min_size=min_size, max_size=max_size).map(
+            lambda parents: os.path.join(*parents))
 
 def make_n_samples(samples: list[any], n: int) -> list[str]:
     """

@@ -24,7 +24,7 @@ class TestPathUtils(unittest.TestCase):
     def test_this_files_directory_returns_the_directory_for_a_file(self):
         actual = this_files_directory()
         # `cwd()` resolves to `src`, the parent of the `common` directory where this file exists.
-        expected = cwd() / 'dra/common/utils'
+        expected = cwd() / 'src/dra/core/common/utils'
         self.assertEqual(str(expected), str(actual), f"expected: {expected}, actual: {actual}")
 
     @given(parent_path_text(), no_leading_dots())
