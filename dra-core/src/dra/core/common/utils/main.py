@@ -251,8 +251,6 @@ class ParserUtil():
         # Ensure output directory exists
         output_dir_path = Path(self.args.output_dir)
         output_dir_path.mkdir(parents=True, exist_ok=True)
-        cache_dir_path = output_dir_path / "cache"
-        cache_dir_path.mkdir(parents=True, exist_ok=True)
 
         markdown_report_path = self._determine_report_path(output_dir_path,
             research_report_title = prompted_values.get('research_report_title'))
@@ -312,7 +310,6 @@ class ParserUtil():
             'display': display,
             'observers': observers,
             "output_dir_path": output_dir_path,
-            "cache_dir_path": cache_dir_path,
             "templates_dir_path": templates_dir_path,
             "markdown_report_path": markdown_report_path,
             "yaml_header_template_path": markdown_yaml_header_path,
@@ -347,7 +344,6 @@ class ParserUtil():
             Variable("verbose",           self.args.verbose, kind=fmt),
             Variable("short_run",         self.args.short_run, kind=fmt),
             Variable("observers",         self.processed_args['observers'], kind=fmt),
-            Variable("cache_dir_path",    self.processed_args['cache_dir_path'], kind='file'),
             Variable("temperature",       self.processed_args['temperature'], label="LLM Temperature", kind=fmt), 
             Variable("max_iterations",    self.processed_args['max_iterations'], label="LLM Max Iterations", kind=fmt),
             Variable("max_tokens",        self.processed_args['max_tokens'], label="LLM Max Inference Tokens", kind=fmt),
