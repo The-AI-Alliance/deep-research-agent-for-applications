@@ -57,10 +57,8 @@ class BaseTask():
         try:
             self.prepare_prompt(logger, prompt_variables)
             self.result = await self._run(orchestrator, logger)
-            if self.result:  # TBD: Probably doesn't catch all error scenarios!
-                self.status = TaskStatus.FINISHED_OK
-            else:
-                self.status = TaskStatus.FINISHED_ERROR
+            self.status = TaskStatus.FINISHED_OK
+            if not self.result:  # TBD: If empty or None, is that an error?
                 self.result = [f"No result for task {self.name}!"]
             self.__log_result(logger)
         except Exception as ex:
