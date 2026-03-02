@@ -50,13 +50,13 @@ class ArXivParserUtil(ParserUtil):
         if not query or not query.strip():
             query = up.read_multi_line_input("Input the query for your research")
         
-        subjects = self.args.subjects
-        if not subjects or not subjects.strip():
-            subjects = up.read_one_line_input("Input any comma-separated subjects, if any, to focus on in ArXiv",
+        categories = self.args.categories
+        if not categories or not categories.strip():
+            categories = up.read_one_line_input("Input any comma-separated ArXiv categories (https://arxiv.org/category_taxonomy), if any, to focus on",
                 empty_allowed=True)
         return {
             'query': query,
-            'subjects': subjects,
+            'categories': categories,
         }
 
 
@@ -84,8 +84,8 @@ def define_cli_arguments() -> ParserUtil:
         help=f"A quoted string with your research query. If not provided on the command line, you will be prompted for it."
     )
     parser_util.parser.add_argument(
-        "--subjects",
-        help=f"Optional, comma-separated subject areas to search in ArXiv. Spaces are allowed within the list."
+        "--categories",
+        help=f"Optional, comma-separated ArXiv categories (see https://arxiv.org/category_taxonomy). Spaces are allowed within the list."
     )
     parser_util.add_arg_markdown_report_path()
     parser_util.add_arg_markdown_research_report_title()
@@ -157,7 +157,7 @@ def create_variables(parser_util: ParserUtil) -> dict[str, Variable]:
     variables_list = [
         Variable("start_time",    parser_util.processed_args['start_time']),
         Variable("query",         parser_util.processed_args['query'], kind='str'),
-        Variable("subjects",      parser_util.processed_args['subjects'], kind='str'),
+        Variable("categories",      parser_util.processed_args['categories'], kind='str'),
         Variable("research_report_title",  parser_util.processed_args['research_report_title'], kind='str'),
     ]
     # Add common values across apps:

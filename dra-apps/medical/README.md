@@ -104,7 +104,8 @@ $ make app-help-medical
 make APP=medical app-help
 Application help provided by dra-apps/medical/main.py:
 cd dra-apps && uv run -m medical.main --help
-usage: main.py [-h] [-q QUERY] [--markdown-report MARKDOWN_REPORT]
+usage: main.py [-h] [-q QUERY] [--terms TERMS]
+               [--markdown-report MARKDOWN_REPORT]
                [--report-title REPORT_TITLE] [--output-dir OUTPUT_DIR]
                [--templates-dir TEMPLATES_DIR]
                [--medical-research-prompt-path MEDICAL_RESEARCH_PROMPT_PATH]
@@ -124,6 +125,10 @@ options:
                         A quoted string with your research query. If not
                         provided on the command line, you will be prompted for
                         it.
+  --terms TERMS, --keywords TERMS
+                        Optional, comma-separated key terms or phrases. Spaces
+                        are allowed within them. Used in some queries to data
+                        sources (recommended).
   --markdown-report MARKDOWN_REPORT
                         Path where a Markdown report is written. If empty, a
                         file name will be generated from the report title.
@@ -205,12 +210,11 @@ agent's documentation. Pass '' or None as the '--mcp-agent-config' value to
 have `mcp-agent` search these directories instead.
 
 TIPS:
-1. Use 'make print-app-info' to see some make variables you can override.
-2. Use 'make --just-print app-run' to see the arguments passed BY THIS MAKEFILE.
+1. Use 'make print-info-app-APP' to see some make variables you can override for APP.
+2. Use 'make --just-print app-run-APP' to see the arguments passed BY THIS MAKEFILE.
    Some argument values will be different in the Makefile than the hard-coded defaults
    in the application itself, which are shown in the help output above!!
 3. To pass additional arguments, use 'make APP_ARGS="..." app-run'. (Note the quotes.)
-
 ```
 
 Most of the arguments are shared between the applications, so they are discussed
@@ -227,16 +231,18 @@ Note that for the optional arguments, default values are shown. _These are the d
 ```shell
 $ make -n app-run-medical
 ...
+make APP=medical app-run
 cd dra-apps && uv run -m medical.main \
     --query "" \
+    --terms "" \
     --report-title "" \
-    --output-dir "../output/medical" \
+    --output-dir "output/medical" \
     --markdown-yaml-header "github_pages_header.yaml" \
-    --templates-dir "dra/apps/medical/templates" \
+    --templates-dir "medical/templates" \
     --medical-research-prompt-path "medical_research_agent.md" \
     --research-model "gpt-4o" \
     --provider "openai" \
-    --mcp-agent-config "dra/apps/medical/config/mcp_agent.config.yaml" \
+    --mcp-agent-config "medical/config/mcp_agent.config.yaml" \
     --temperature 0.7 \
     --max-iterations 25 \
     --max-tokens 500000 \
@@ -250,7 +256,7 @@ cd dra-apps && uv run -m medical.main \
 > * All the values for the CLI arguments shown here are defined as variables near the top of the `Makefile`. So, if you want to permanently change any of these values, edit the corresponding variable definitions there.
 > * Use `make help` to see a list of the most important `make` targets with brief descriptions.
 
-The unique options for the medical application include the `--query` and `--report-title`. We pass an empty string in the `Makefile`, so you will be prompted for them. 
+The unique options for the medical application include the `--query`, `--terms`, and `--report-title`. We pass an empty string for each one in the `Makefile`, so you will be prompted for them. 
 
 There is also a `--markdown-report` option that specifies the report's file name. The `Makefile` doesn't use this argument for the arxiv and medical applications (it does for the finance application...). Instead, it allows the arxiv and medical applications to synthesize a suitable name based on the report title you specify. However, it will be written in the `--output-dir` location, so you can find it easily.
 

@@ -110,7 +110,7 @@ Here are the most useful `make` targets:
 | `app-help-arxiv`.    | Help on the arxiv application. |
 | `app-run-finance`    | Run the finance application. Uses META by default. |
 | `app-run-medical`    | Run the medical application. Prompts you for a research query, keywords/terms, and a report title. |
-| `app-run-arxiv`.     | Run the arxiv application. Prompts you for a research query, optional subject(s), and a report title. |
+| `app-run-arxiv`.     | Run the arxiv application. Prompts you for a research query, optional categories, and a report title. |
 
 > [!NOTE]
 > For easy demonstration purposes, the apps either have default definitions for their required flags in the `Makefile` or they will prompt you for values. This makes it easy to just try them out. However, the main MCP server used by the medical application has to be installed locally first. See the medical application's [README](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-apps/medical/README.md) for details.
@@ -162,24 +162,24 @@ cd dra-apps && uv run -m medical.main \
   --report-title "Diabetes Mellitus"
 ```
 
-For the arxiv application, `--query "QUERY"` and `--report-title TITLE` are required, and `--subjects "SUBJECTS" (subject areas defined by ArXiv) is optional. The app will prompt you for their values if these arguments are not provided or the values supplied are empty. (They are empty in the `Makefile`)
+For the arxiv application, `--query "QUERY"` and `--report-title TITLE` are required, and `--categories "CATEGORIES"` defined by [ArXiv](https://arxiv.org/category_taxonomy) (such as `cs.AI`) is optional. The app will prompt you for their values if these arguments are not provided or the values supplied are empty. (They are empty in the `Makefile`)
 
-Here is an example for researching "synthetic data generation for domain-specific model tuning":
+Here is an example for researching synthetic data generation for domain-specific model tuning, where the categories specified are `cs.AI` (_artificial intelligence_), `cs.CL` (_computational and language_, e.g., NLP), `cs.LG` (_machine learning_), and `cs.MA` (_multiagent systems_):
 
 ```shell
 make.sh --arxiv \
   --query "What are the best techniques for generating high-quality, synthetic data for domain-specific tuning of LLMs?" \
-  --subjects "Computer Science" \
+  --categories "cs.AI,cs.CL,cs.LG,cs.MA" \
   --report-title "Data Synthesis for Domain-Specific LLM Tuning"
 
 make QUERY="What are the best techniques for generating high-quality, synthetic data for domain-specific tuning of LLMs?" \
-  SUBJECTS= "Computer Science" \
+  CATEGORIES="cs.AI,cs.CL,cs.LG,cs.MA" \
   REPORT_TITLE= "Data Synthesis for Domain-Specific LLM Tuning" \
   app-run-arxiv
 
 cd dra-apps && uv run -m arxiv.main \
   --query "What are the best techniques for generating high-quality, synthetic data for domain-specific tuning of LLMs?" \
-  --subjects "Computer Science" \
+  --categories "cs.AI,cs.CL,cs.LG,cs.MA" \
   --report-title "Data Synthesis for Domain-Specific LLM Tuning"
 ```
 
@@ -318,7 +318,7 @@ agent's documentation. Pass '' or None as the '--mcp-agent-config' value to
 have `mcp-agent` search these directories instead.
 
 TIPS:
-1. Use 'make print-app-info' to see some make variables you can override.
+1. Use 'make print-info-app-APP' to see some make variables you can override for APP.
 2. Use 'make --just-print app-run' to see the arguments passed BY THIS MAKEFILE.
    Some argument values will be different in the Makefile than the hard-coded defaults
    in the application itself, which are shown in the help output above!!

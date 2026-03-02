@@ -11,6 +11,10 @@ This README adds additional information to supplement the description provided i
 
 There are a few MCP servers for working with papers in ArXiv.org. We will use one of the more popular choices, [`arxiv-mcp-server`](https://pypi.org/project/arxiv-mcp-server/). This server runs locally on your machine and it does all the "heavy lifting" for finding, downloading, reading, and summarizing papers. 
 
+Some others to consider include:
+* [`mcp-arxiv-query`](https://pypi.org/project/mcp-arxiv-query/)
+* [`arxiv-mcp`](https://mcpservers.org/servers/kelvingao/arxiv-mcp)
+
 We also use [Docling](https://docling-project.github.io/docling/), a powerful tool for parsing documents in different formats, including PDFs. We will run the [Docling MCP Server](https://docling-project.github.io/docling/usage/mcp/#docling-mcp)
 
 See the [configuration files](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-apps/arxiv/config/) for how they are set up.
@@ -26,8 +30,8 @@ Here are the most useful `make` targets for this application:
 | Make Target          | Description                     |
 | :------------------- | :------------------------------ |
 | `list-apps`          | List all the applications.      |
-| `app-help-arxiv`     | Help on the arxiv application |
-| `app-run-arxiv`      | Run the arxiv application. Prompts you for a research query and a report title. |
+| `app-help-arxiv`     | Help on the arxiv application   |
+| `app-run-arxiv`      | Run the arxiv application. Prompts you for a research query, optional categories, and a report title. |
 
 > [!NOTE]
 > In our experience, the application often runs for a long time when using Ollama inference, but can be fast when using OpenAI or Anthropic. If you want to limit it to a short run to see what it does (with less than optimal results...), try one of these commands instead:
@@ -37,25 +41,27 @@ Here are the most useful `make` targets for this application:
 > make APP_ARGS=--short-run app-run-arxiv
 > ```
 
-Either running with or without `make`, the required arguments for the arxiv application are `--query "QUERY"` and `--report-title "TITLE"`, but you will be prompted for them if you don't supply the arguments. An optional argument is `--subjects` to specify a comma-separated list of the subject areas within ArXiv where the research should focus (e.g., `physics,mathematics`)
+For the arxiv application, `--query "QUERY"` and `--report-title TITLE` are required, and `--categories "CATEGORIES"` defined by [ArXiv](https://arxiv.org/category_taxonomy) (such as `cs.AI`) is optional. The app will prompt you for their values if these arguments are not provided or the values supplied are empty. (They are empty in the `Makefile`)
 
-Here is an example of the shortest `make.sh`, `make`, and CLI commands you can run to do research with a custom query about _diabetes mellitus_. **NOTE:** you run these commands in the repo's _root_ directory:
+Either running with or without `make`, the required arguments for the arxiv application are `--query "QUERY"` and `--report-title "TITLE"`, but you will be prompted for them if you don't supply the arguments. An optional argument is `--categories "CATEGORIES"` defined by [ArXiv](https://arxiv.org/category_taxonomy) (such as `cs.AI`), where `CATEGORIES` is a comma-separated list.
+
+Here is an example for researching synthetic data generation for domain-specific model tuning, where the categories specified are `cs.AI` (_artificial intelligence_), `cs.CL` (_computational and language_, e.g., NLP), `cs.LG` (_machine learning_), and `cs.MA` (_multiagent systems_):
 
 ```shell
 make.sh --arxiv \
-  --query "What are the most effective ways to tune a large language model?" \
-  --subjects "Computer Science" \
-  --report-title "LLM Tuning"
+  --query "What are the best techniques for generating high-quality, synthetic data for domain-specific tuning of LLMs?" \
+  --categories "cs.AI,cs.CL,cs.LG,cs.MA" \
+  --report-title "Data Synthesis for Domain-Specific LLM Tuning"
 
-make QUERY="What are the most effective ways to tune a large language model?" \
-  SUBJECTS="Computer Science" \
-  REPORT_TITLE="LLM Tuning" \
+make QUERY="What are the best techniques for generating high-quality, synthetic data for domain-specific tuning of LLMs?" \
+  CATEGORIES="cs.AI,cs.CL,cs.LG,cs.MA" \
+  REPORT_TITLE= "Data Synthesis for Domain-Specific LLM Tuning" \
   app-run-arxiv
 
 cd dra-apps && uv run -m arxiv.main \
-  --query "What are the most effective ways to tune a large language model?" \
-  --subjects "Computer Science" \
-  --report-title "LLM Tuning"
+  --query "What are the best techniques for generating high-quality, synthetic data for domain-specific tuning of LLMs?" \
+  --categories "cs.AI,cs.CL,cs.LG,cs.MA" \
+  --report-title "Data Synthesis for Domain-Specific LLM Tuning"
 ```
 
 The application provides many optional CLI arguments to configure its behavior. Use the following `make` and CLI commands to see the help.
@@ -65,7 +71,7 @@ $ make app-help-arxiv
 make APP=arxiv app-help
 Application help provided by dra-apps/arxiv/main.py:
 cd dra-apps && uv run -m arxiv.main --help
-usage: main.py [-h] [-q QUERY] [--subjects SUBJECTS]
+usage: main.py [-h] [-q QUERY] [--categories CATEGORIES]
                [--markdown-report MARKDOWN_REPORT]
                [--report-title REPORT_TITLE] [--output-dir OUTPUT_DIR]
                [--templates-dir TEMPLATES_DIR]
@@ -86,8 +92,10 @@ options:
                         A quoted string with your research query. If not
                         provided on the command line, you will be prompted for
                         it.
-  --subjects SUBJECTS   Optional, comma-separated subject areas to search in
-                        ArXiv. Spaces are allowed within the list.
+  --categories CATEGORIES
+                        Optional, comma-separated ArXiv categories (see
+                        https://arxiv.org/category_taxonomy). Spaces are
+                        allowed within the list.
   --markdown-report MARKDOWN_REPORT
                         Path where a Markdown report is written. If empty, a
                         file name will be generated from the report title.
@@ -169,11 +177,11 @@ agent's documentation. Pass '' or None as the '--mcp-agent-config' value to
 have `mcp-agent` search these directories instead.
 
 TIPS:
-1. Use 'make print-info-APP' to see some make variables you can override for APP.
+1. Use 'make print-info-app-APP' to see some make variables you can override for this application.
 2. Use 'make --just-print app-run-APP' to see the arguments passed BY THIS MAKEFILE.
    Some argument values will be different in the Makefile than the hard-coded defaults
    in the application itself, which are shown in the help output above!!
-3. To pass additional arguments, use 'make APP_ARGS="..." app-run'. (Note the quotes.)
+3. To pass additional arguments, use 'make APP_ARGS="..." app-run-arxiv'. (Note the quotes.)
 ```
 
 Most of the arguments are shared between the applications, so they are discussed
@@ -189,9 +197,11 @@ Note that for the optional arguments, default values are shown. _These are the d
 
 ```shell
 $ make -n app-run-arxiv
+make APP=arxiv app-run
 ...
 cd dra-apps && uv run -m arxiv.main \
     --query "" \
+    --categories "" \
     --report-title "" \
     --output-dir "output/arxiv" \
     --markdown-yaml-header "github_pages_header.yaml" \
@@ -205,7 +215,7 @@ cd dra-apps && uv run -m arxiv.main \
     --max-tokens 500000 \
     --max-cost-dollars 2.0 \
     --max-time-minutes 15 \
-    --verbose
+    --verbose 
 ...
 ```
 
@@ -213,7 +223,7 @@ cd dra-apps && uv run -m arxiv.main \
 > * All the values for the CLI arguments shown here are defined as variables near the top of the `Makefile`. So, if you want to permanently change any of these values, edit the corresponding variable definitions there.
 > * Use `make help` to see a list of the most important `make` targets with brief descriptions.
 
-The unique options for the arxiv application include the `--query`, `--subjects`, and `--report-title`. We pass an empty string in the `Makefile`, so you will be prompted for them. 
+The unique options for the arxiv application include the `--query`, `--categories`, and `--report-title`. We pass empty strings for them in the `Makefile`, so you will be prompted for them. 
 
 There is also a `--markdown-report` option that specifies the report's file name. The `Makefile` doesn't use this argument for the arxiv and medical applications (it does for the finance application...). Instead, it allows the arxiv and medical applications to synthesize a suitable name based on the report title you specify. However, it will be written in the `--output-dir` location, so you can find it easily.
 

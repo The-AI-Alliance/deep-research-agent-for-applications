@@ -53,7 +53,7 @@ MEDICAL_RESEARCH_PROMPT_FILE ?= medical_research_agent.md
 # For the arxiv app:
 # Pass in a quoted string and report title, or you will be prompted for them.
 # QUERY                      ?= 
-# SUBJECTS                   ?= 
+# CATEGORIES                 ?= 
 # REPORT_TITLE               ?= 
 ARXIV_RESEARCH_PROMPT_FILE   ?= arxiv_research_agent.md
 
@@ -149,7 +149,7 @@ endef
 
 define app_help_footer
 TIPS:
-1. Use 'make print-info-APP' to see some make variables you can override for APP.
+1. Use 'make print-info-app-APP' to see some make variables you can override for APP.
 2. Use 'make --just-print app-run-APP' to see the arguments passed BY THIS MAKEFILE.
    Some argument values will be different in the Makefile than the hard-coded defaults
    in the application itself, which are shown in the help output above!!
@@ -300,7 +300,7 @@ do-app-run-medical::
 do-app-run-arxiv::
 	cd ${APPS_DIR} && uv run -m ${APP_MODULE} \
 		--query "${QUERY}" \
-		--subjects "${SUBJECTS}" \
+		--categories "${CATEGORIES}" \
 		--report-title "${REPORT_TITLE}" \
 		--output-dir "${OUTPUT_DIR}" \
 		--markdown-yaml-header "${MARKDOWN_YAML_HEADER_FILE}" \

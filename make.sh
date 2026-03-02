@@ -35,8 +35,8 @@ For the medical and arxiv app:
 --report-title "TITLE"  
                   Same as "--title TITLE".
 --terms  "TERMS"  Terms/keywords that are important for this topic. (Only for the medical app)
---subjects "SUBJECTS"
-                  The subject areas to focus on. (Only for the arxiv app)
+--categories "CATEGORIES"
+                  The categories to focus on. (Only for the arxiv app)
 
 --openai          Use OpenAI models for inference:
                     Orchestration:    $OPENAI_RESEARCH_MODEL
@@ -143,10 +143,10 @@ do
 			TERMS="$1"
 		)
 		;;
-	--subjects)
+	--categories)
 		shift
 		vars+=(
-			SUBJECTS="$1"
+			CATEGORIES="$1"
 		)
 		;;
 	--ollama)
