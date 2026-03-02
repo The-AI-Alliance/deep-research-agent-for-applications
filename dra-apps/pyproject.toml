@@ -1,0 +1,16 @@
+[project]
+name = "dra-apps"
+version = "0.5.0"
+description = "Deep Research Agent applications for research in finance, medical, and more domains to come."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "dra-core @ file://${PROJECT_ROOT}/../dra-core",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]

@@ -2,10 +2,9 @@
 pages_url       := https://the-ai-alliance.github.io/deep-research-agent-for-applications/
 docs_dir        := docs
 site_dir        := ${docs_dir}/_site
-clean_code_dirs := logs output src/output ${SRC_DIR}/.hypothesis
-clean_doc_dirs  := ${site_dir} ${docs_dir}/.sass-cache
-clean_dirs      := ${clean_code_dirs} ${clean_doc_dirs}
-SRC_DIR         := src
+
+APPS_DIR        := dra-apps
+DRA_CORE_DIR    := dra-core
 
 ## Environment variables
 MAKEFLAGS           ?= # -w --warn-undefined-variables
@@ -22,7 +21,8 @@ TIMESTAMP           ?=$(shell date "+%Y-%m-%d_%H-%M-%S")
 
 FINANCE_APP                ?= finance
 MEDICAL_APP                ?= medical
-APPS                       ?= ${FINANCE_APP} ${MEDICAL_APP}
+ARXIV_APP                  ?= arxiv
+APPS                       ?= ${FINANCE_APP} ${MEDICAL_APP} ${ARXIV_APP}
 
 # Default:
 APP                        ?= ${FINANCE_APP}
@@ -33,14 +33,6 @@ MAX_COST_DOLLARS           ?= 2.0
 MAX_TIME_MINUTES           ?= 15
 APP_ARGS                   ?=
 
-# For the medical app:
-# Pass in a quoted string for QUERY or prompt the user.
-# Do the same for the report title. Or, you will be prompted for them.
-# QUERY                      ?= 
-# TERMS                      ?=
-# REPORT_TITLE               ?= 
-MEDICAL_RESEARCH_PROMPT_FILE ?= medical_research_agent.md
-
 # For the Finance app:
 TICKER                     ?= META
 COMPANY_NAME               ?= Meta Platforms, Inc.
@@ -50,43 +42,61 @@ FIN_RESEARCH_PROMPT_FILE   ?= financial_research_agent.md
 EXCEL_WRITER_PROMPT_FILE   ?= excel_writer_agent.md
 OUTPUT_SPREADSHEET         ?= ${TICKER}_financials.xlsx
 
+# For the medical app:
+# Pass in a quoted string, the comma-separated terms, and report title,
+# or you will be prompted for them.
+# QUERY                      ?= 
+# TERMS                      ?=
+# REPORT_TITLE               ?= 
+MEDICAL_RESEARCH_PROMPT_FILE ?= medical_research_agent.md
+
+# For the arxiv app:
+# Pass in a quoted string and report title, or you will be prompted for them.
+# QUERY                      ?= 
+# CATEGORIES                 ?= 
+# REPORT_TITLE               ?= 
+ARXIV_RESEARCH_PROMPT_FILE   ?= arxiv_research_agent.md
+
 # For all apps:
 
-# Use a non-empty value for DEBUG to enable debug flags for MCP servers:
-DEBUG                      ?= 
+# Relative directory paths are relative to ${APPS_DIR}:
 ifeq (finance,${APP})
-	OUTPUT_DIR              ?= ../output/${APP}/${TICKER}
+	OUTPUT_DIR              ?= output/${APP}/${TICKER}
 	OUTPUT_REPORT           ?= ${TICKER}_report.md
 	REPORT_TITLE            ?= ${TICKER} Report
 else ifeq (medical,${APP})
-	OUTPUT_DIR              ?= ../output/${APP}
-	# Use the user-supplied title to create the report name.
+	OUTPUT_DIR              ?= output/${APP}
+	# Instead of defining a default here, use the user-supplied title
+	# to create the report name.
 	# OUTPUT_REPORT           ?= medical-report.md
+else ifeq (arxiv,${APP})
+	OUTPUT_DIR              ?= output/${APP}
+	# Instead of defining a default here, use the user-supplied title
+	# to create the report name.
+	# OUTPUT_REPORT           ?= arxiv-report.md
 else
-	OUTPUT_DIR              ?= ../output/${APP}/${TIMESTAMP}
+	OUTPUT_DIR              ?= output/${APP}/${TIMESTAMP}
 	OUTPUT_REPORT           ?= report.md
 endif
 
-REL_APP_DIR                ?= dra/apps/${APP}
-REL_APP_PATH               ?= ${REL_APP_DIR}/main.py
-APP_MODULE                 ?= dra.apps.${APP}.main
+REL_APP_PATH               ?= ${APP}/main.py
+APP_MODULE                 ?= ${APP}.main
 RESEARCH_MODEL             ?= gpt-4o
 INFERENCE_PROVIDER         ?= openai
-TEMPLATES_DIR              ?= ${REL_APP_DIR}/templates
+TEMPLATES_DIR              ?= ${APP}/templates
 MARKDOWN_YAML_HEADER_FILE  ?= github_pages_header.yaml
 
-ifeq (,${DEBUG})
-	DEBUG_FILE = 
-else
-	DEBUG_FILE = .debug
-endif
 ifeq (ollama,${INFERENCE_PROVIDER})
-	MCP_AGENT_CONFIG_FILE    ?= ${REL_APP_DIR}/config/mcp_agent.config.${INFERENCE_PROVIDER}${DEBUG_FILE}.yaml
+	MCP_AGENT_CONFIG_FILE    ?= ${APP}/config/mcp_agent.config.${INFERENCE_PROVIDER}.yaml
 else
-	MCP_AGENT_CONFIG_FILE    ?= ${REL_APP_DIR}/config/mcp_agent.config${DEBUG_FILE}.yaml
+	MCP_AGENT_CONFIG_FILE    ?= ${APP}/config/mcp_agent.config.yaml
 endif
 TEMPERATURE                ?= 0.7
 MAX_ITERATIONS             ?= 25
+
+clean_code_dirs := logs ${APPS_DIR}/output ${DRA_CORE_DIR}/.hypothesis
+clean_doc_dirs  := ${site_dir} ${docs_dir}/.sass-cache
+clean_dirs      := ${clean_code_dirs} ${clean_doc_dirs}
 
 # GitHub Pages...
 
@@ -108,7 +118,7 @@ make all                # Run the ${APP} application by building "app-run".
 make all-apps           # Run all the applications: ${APPS}.
 make all-apps-help      # Show help for all the apps: ${APPS}.
 make app-run            # Run the ${APP} application with default arguments.
-make app-run-<foo>      # Run the <foo> application with default arguments.
+make app-run-<foo>      # Run the "<foo>" application with default arguments (or prompting for values).
 make app-help           # Run the ${APP} application with --help to see the support arguments.
                         # Also prints the default invocation used by "app-run".
 make app-help-<foo>     # Show help for the <foo> application.
@@ -128,8 +138,8 @@ make setup-jekyll       # Install Jekyll. Ruby 3.X must be installed already.
 Miscellaneous make targets for help, debugging, etc.:
 
 make help               # Prints this output.
-make print-info         # Print all the current values of some make and env. variables.
-make print-app-info     # Print just the values related to the app.
+make print-info         # Print all the current default values of some make and env. variables.
+make print-info-<foo>   # Print just the values related to the app "<foo>".
 make print-make-info    # Print just the values related to make, etc.
 make print-docs-info    # Print just the values related to the GitHub Pages docs.
 make clean_code         # Deletes these directories: ${clean_code_dirs}
@@ -139,8 +149,8 @@ endef
 
 define app_help_footer
 TIPS:
-1. Use 'make print-app-info' to see some make variables you can override.
-2. Use 'make --just-print app-run' to see the arguments passed BY THIS MAKEFILE.
+1. Use 'make print-info-app-APP' to see some make variables you can override for APP.
+2. Use 'make --just-print app-run-APP' to see the arguments passed BY THIS MAKEFILE.
    Some argument values will be different in the Makefile than the hard-coded defaults
    in the application itself, which are shown in the help output above!!
 3. To pass additional arguments, use 'make APP_ARGS="..." app-run'. (Note the quotes.)
@@ -199,16 +209,17 @@ endef
 # make is invoked separately for each app.
 
 .PHONY: all list-apps app-setup
-.PHONY: setup-jekyll run-jekyll view-pages view-local clean clean_code clean_docs help 
+.PHONY: setup-jekyll run-jekyll view-pages view-local clean clean_code clean_docs help
 .PHONY: all-apps all-apps-help app-run do-app-run-${APP} before-app-run app-check setup-output-dir after-app-run
 
 .PHONY: uv-check uv-cmd-check venv-check
 .PHONY: mcp-agent-check test tests
-.PHONY: print-info print-app-info print-make-info print-docs-info show-output-files
+.PHONY: print-info print-info-app print-make-info print-docs-info show-output-files
+.PHONY: build-dra-core install-dra-core test-dra-core
 
 all list-apps::
 	@echo "Available Apps: ${APPS}"
-	@echo "To run a particular app, use 'make run-app-foo'. See also 'make app-help'."
+	@echo "To run a particular app 'foo', use 'make run-app-foo'. See also 'make app-help'."
 
 apps_run := ${APPS:%=app-run-%}
 ${apps_run}::
@@ -218,18 +229,32 @@ apps_help := ${APPS:%=app-help-%}
 ${apps_help}::
 	${MAKE} APP=${@:app-help-%=%} app-help
 
+# DRA Core targets
+build-dra-core::
+	@echo "Building dra-core package..."
+	cd ${DRA_CORE_DIR} && uv build
+
+install-dra-core::
+	@echo "Installing dra-core package in development mode..."
+	cd ${DRA_CORE_DIR} && uv sync
+
+test tests test-dra-core::
+	@echo "Running dra-core tests..."
+	cd ${DRA_CORE_DIR} && uv run python -m unittest discover
+
 app-run:: before-app-run do-app-run-${APP} after-app-run
 before-app-run:: app-check setup-output-dir
-# Note that OUTPUT_DIR is defined relative to SRC_DIR, but we are currently not in SRC_DIR
+# Note that OUTPUT_DIR is defined relative to APPS_DIR, but we are currently not in APPS_DIR
 setup-output-dir::
-	@test ! -d "${SRC_DIR}/${OUTPUT_DIR}" || (mv "${SRC_DIR}/${OUTPUT_DIR}" "${SRC_DIR}/${OUTPUT_DIR}"-save-${TIMESTAMP} && echo "*** Moved old "${SRC_DIR}/${OUTPUT_DIR}" to "${SRC_DIR}/${OUTPUT_DIR}"-save-${TIMESTAMP} ***")
-	mkdir -p "${SRC_DIR}/${OUTPUT_DIR}"
+	@test ! -d "${APPS_DIR}/${OUTPUT_DIR}" || (mv "${APPS_DIR}/${OUTPUT_DIR}" "${APPS_DIR}/${OUTPUT_DIR}"-save-${TIMESTAMP} && echo "*** Moved old "${APPS_DIR}/${OUTPUT_DIR}" to "${APPS_DIR}/${OUTPUT_DIR}"-save-${TIMESTAMP} ***")
+	mkdir -p "${APPS_DIR}/${OUTPUT_DIR}"
 	@echo
 after-app-run:: show-output-files
 
 # Application-specific run commands:
+
 do-app-run-finance::
-	cd ${SRC_DIR} && uv run -m ${APP_MODULE} \
+	cd ${APPS_DIR} && uv run -m ${APP_MODULE} \
 		--ticker "${TICKER}" \
 		--company-name "${COMPANY_NAME}" \
 		--reporting-currency "${REPORTING_CURRENCY}" \
@@ -253,7 +278,7 @@ do-app-run-finance::
 		--verbose ${APP_ARGS}
 		
 do-app-run-medical::
-	cd ${SRC_DIR} && uv run -m ${APP_MODULE} \
+	cd ${APPS_DIR} && uv run -m ${APP_MODULE} \
 		--query "${QUERY}" \
 		--terms "${TERMS}" \
 		--report-title "${REPORT_TITLE}" \
@@ -272,13 +297,30 @@ do-app-run-medical::
 		--verbose ${APP_ARGS}
 #		--markdown-report "${OUTPUT_REPORT}" 
 		
+do-app-run-arxiv::
+	cd ${APPS_DIR} && uv run -m ${APP_MODULE} \
+		--query "${QUERY}" \
+		--categories "${CATEGORIES}" \
+		--report-title "${REPORT_TITLE}" \
+		--output-dir "${OUTPUT_DIR}" \
+		--markdown-yaml-header "${MARKDOWN_YAML_HEADER_FILE}" \
+		--templates-dir "${TEMPLATES_DIR}" \
+		--arxiv-research-prompt-path "${ARXIV_RESEARCH_PROMPT_FILE}" \
+		--research-model "${RESEARCH_MODEL}" \
+		--provider "${INFERENCE_PROVIDER}" \
+		--mcp-agent-config "${MCP_AGENT_CONFIG_FILE}" \
+		--temperature ${TEMPERATURE} \
+		--max-iterations ${MAX_ITERATIONS} \
+		--max-tokens ${MAX_TOKENS} \
+		--max-cost-dollars ${MAX_COST_DOLLARS} \
+		--max-time-minutes ${MAX_TIME_MINUTES} \
+		--verbose ${APP_ARGS}
+#		--markdown-report "${OUTPUT_REPORT}" 
+		
 show-output-files::
 	@echo
-	@echo "Output files in ${SRC_DIR}/${OUTPUT_DIR}:"
-	@cd "${SRC_DIR}/${OUTPUT_DIR}" && find . -type f -exec ls -lh {} \;
-
-test tests:: uv-check
-	cd ${SRC_DIR} && uv run python -m unittest discover
+	@echo "Output files in ${APPS_DIR}/${OUTPUT_DIR}:"
+	@cd "${APPS_DIR}/${OUTPUT_DIR}" && find . -type f -exec ls -lh {} \;
 
 app-check:: uv-check mcp-agent-check
 
@@ -286,20 +328,22 @@ uv-check:: uv-cmd-check venv-check
 uv-cmd-check::
 	@command -v uv > /dev/null || ( echo ${missing_uv_message} && exit 1 )
 venv-check::
-	[[ -d .venv ]] || uv venv
+	[[ -d ${DRA_CORE_DIR}/.venv ]] || (cd ${DRA_CORE_DIR} && uv venv)
+	[[ -d ${APPS_DIR}/../.venv ]] || (cd apps && uv venv)
 
 mcp-agent-check::
-	@uv pip freeze | grep mcp-agent > /dev/null || ( echo ${missing_mcp_agent_message} && exit 1 )
+	@cd ${DRA_CORE_DIR} && uv pip freeze | grep mcp-agent > /dev/null || ( echo ${missing_mcp_agent_message} && exit 1 )
 
-app-setup:: uv-check venv-check
-	uv add mcp-agent
+app-setup:: uv-check venv-check install-dra-core
+	@echo "Installing apps dependencies..."
+	cd apps && uv sync
 
 .PHONY: app-help app-run-help app-help-header app-help-footer
 
 app-help app-run-help:: app-help-header app-help-footer
 app-help-header::
-	@echo "Application help provided by ${SRC_DIR}/${REL_APP_PATH}:"
-	cd ${SRC_DIR} && uv run -m ${APP_MODULE} --help
+	@echo "Application help provided by ${APPS_DIR}/${REL_APP_PATH}:"
+	cd ${APPS_DIR} && uv run -m ${APP_MODULE} --help
 	@echo
 app-help-footer::
 	$(info ${app_help_footer})
@@ -311,38 +355,46 @@ help::
 	@echo "Run make app-help for more help on running the app."
 	@echo
 
-print-info: print-app-info print-make-info print-docs-info
-print-app-info:
-	@echo "For settings for the non-default apps, run with make APP=app print-info:"
-	@echo "Relative paths shown are relative to ${SRC_DIR}."
+print-info: print-info-app print-make-info print-docs-info
+${APPS:%=print-info-app-%}:
+	@make APP=${@:print-info-app-%=%} print-info-app
+print-info-app:
+	@echo "Relative paths shown are relative to the directory '${APPS_DIR}'."
 	@echo
-	@echo "APP                          '${APP}'"
-	@echo "APP_MODULE                   '${APP_MODULE}'"
+	@echo "This application:"
+	@echo "  APP                          '${APP}'"
+	@echo "  APP_MODULE                   '${APP_MODULE}'"
 	@echo
 	@echo "Inference:"
-	@echo "  INFERENCE_PROVIDER         '${INFERENCE_PROVIDER}'"
-	@echo "  MCP_AGENT_CONFIG_FILE      '${MCP_AGENT_CONFIG_FILE}'"
-	@echo "  RESEARCH_MODEL             '${RESEARCH_MODEL}'"
+	@echo "  INFERENCE_PROVIDER           '${INFERENCE_PROVIDER}'"
+	@echo "  MCP_AGENT_CONFIG_FILE        '${MCP_AGENT_CONFIG_FILE}'"
+	@echo "  RESEARCH_MODEL               '${RESEARCH_MODEL}'"
 	@echo
 	@echo "Templates (for prompts, etc.):"
-	@echo "  TEMPLATES_DIR              '${TEMPLATES_DIR}'"
+	@echo "  TEMPLATES_DIR                '${TEMPLATES_DIR}'"
 	@echo
-	@echo "OUTPUT_DIR                   '${OUTPUT_DIR}'"
-	@echo "  OUTPUT_REPORT              '${OUTPUT_REPORT}' (under OUTPUT_DIR)"
+	@echo "OUTPUT_DIR                     '${OUTPUT_DIR}'"
+	@echo "  OUTPUT_REPORT                '${OUTPUT_REPORT}' (under OUTPUT_DIR; if empty, the report name will be 'calculated')"
 	@echo
 	@echo "For the Finance App:"
-	@echo "  TICKER                     '${TICKER}'"
-	@echo "  COMPANY_NAME               '${COMPANY_NAME}'"
-	@echo "  REPORTING_CURRENCY         '${REPORTING_CURRENCY}'"
-	@echo "  OUTPUT_SPREADSHEET         '${OUTPUT_SPREADSHEET}' (under OUTPUT_DIR)"
-	@echo "  EXCEL_WRITER_MODEL         '${EXCEL_WRITER_MODEL}'"
-	@echo "  FIN_RESEARCH_PROMPT_FILE   '${FIN_RESEARCH_PROMPT_FILE}'"
-	@echo "  EXCEL_WRITER_PROMPT_FILE   '${EXCEL_WRITER_PROMPT_FILE}'"
+	@echo "  TICKER                       '${TICKER}'"
+	@echo "  COMPANY_NAME                 '${COMPANY_NAME}'"
+	@echo "  REPORTING_CURRENCY           '${REPORTING_CURRENCY}'"
+	@echo "  OUTPUT_SPREADSHEET           '${OUTPUT_SPREADSHEET}' (under OUTPUT_DIR)"
+	@echo "  EXCEL_WRITER_MODEL           '${EXCEL_WRITER_MODEL}'"
+	@echo "  FIN_RESEARCH_PROMPT_FILE     '${FIN_RESEARCH_PROMPT_FILE}'"
+	@echo "  EXCEL_WRITER_PROMPT_FILE     '${EXCEL_WRITER_PROMPT_FILE}'"
 	@echo
 	@echo "For the Medical App:"
+	@echo "  QUERY                        '${QUERY}'"
+	@echo "  TERMS                        '${TERMS}'"
 	@echo "  MEDICAL_RESEARCH_PROMPT_FILE '${MEDICAL_RESEARCH_PROMPT_FILE}'"
 	@echo
-	@echo "APP_ARGS                     '${APP_ARGS}'"
+	@echo "For the ArXiv App:"
+	@echo "  QUERY                        '${QUERY}'"
+	@echo "  ARXIV_RESEARCH_PROMPT_FILE   '${ARXIV_RESEARCH_PROMPT_FILE}'"
+	@echo
+	@echo "APP_ARGS                       '${APP_ARGS}'"
 	@echo
 
 print-make-info:
