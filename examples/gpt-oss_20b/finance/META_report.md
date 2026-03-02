@@ -1,5 +1,11 @@
-# Deep Research Agent for Finance
+---
+layout: default
+title: Deep Research Agent for Finance
+nav_order: 100
+has_children: false
+---
 
+# Deep Research Agent for Finance
 
 **Table: This run's properties**
 | Property | Value |
