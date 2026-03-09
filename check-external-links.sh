@@ -13,10 +13,19 @@ For markdown files, it prints anchor tags ("[name](url)") that don't
 have a "{:target=...}" appended to them. For HTML files, it looks for 
 the equivalent "<a href="..." target="...">...</a>".
 
+It also handles our way of referencing the separate glossary site, where
+the markdown URL will be '[Term]({{site.glossaryurl}}/#term)' and not have
+an explicit 'http...' leader. 
+
+It attempts to correctly ignore image URLs, e.g., '![label](https://example.com/image.png)',
+by looking at the file extension (jpg|jpeg|png|svg|mp3|mp4). This means
+that if a URL that should have a target happens to have one of those strings,
+it won't be checked for the target!
+
 It doesn't exit with an error if such links are found, because in some
 cases, this might be intentional.
 
-Usage: $script [-h|--help] [-n|--noop] [path1 ...]
+Usage: $script [-h|--help] [-n|--noop] [-v|--verbose] [path1 ...]
 
 Where the arguments are the following:
 -h | --help            Print this message and exit
@@ -27,6 +36,8 @@ Where the arguments are the following:
 path1 ...              Check these paths. Directories will be visited recursively.
                        Default: All markdown and HTML files under "$default_path",
                        excluding files under "_site" and "_sass".
+NOTES:
+1. Skips files found under "temp", "tmp", "_site", and "_sass" directories.
 EOF
 }
 
@@ -78,10 +89,16 @@ do
 		dir=$([[ -d "$path" ]] && echo "(directory)")
 		echo "$path $dir"
 	fi
-	$eg -nHoR '\(https?[^)]+\)(\S*)' \
+	$NOOP $eg -nHoR '\(https?[^)]+\)(\S*)' \
 		--include '*.markdown' --include '*.md' \
+ 		--exclude-dir 'temp' --exclude-dir 'tmp' \
 		--exclude-dir '_site' --exclude-dir '_sass' \
-		$path | $eg -v 'target='
+		$path | $eg -v 'target=' | $eg -v '\.(jpg|jpeg|png|svg|mp3|mp4)'
+	$NOOP $eg -nHoR '\(\{\{site.glossaryurl\}\}[^)]*\)(\S*)' \
+		--include '*.markdown' --include '*.md' \
+ 		--exclude-dir 'temp' --exclude-dir 'tmp' \
+		--exclude-dir '_site' --exclude-dir '_sass' \
+		$path | $eg -v 'target=' | $eg -v '\.(jpg|jpeg|png|svg|mp3|mp4)'
 done
 
 [[ -n "$VERBOSE" ]] && echo "Checking HTML files:"
@@ -92,8 +109,9 @@ do
 		dir=$([[ -d "$path" ]] && echo "(directory)")
 		echo "$path $dir"
 	fi
-	$eg -nHoR '<a\s*href="https?[^>]+>' \
+	$NOOP $eg -nHoR '<a\s*href="https?[^>]+>' \
 		--include '*.html' \
+ 		--exclude-dir 'temp' --exclude-dir 'tmp' \
 		--exclude-dir '_site' --exclude-dir '_sass' \
-		$path | $eg -v 'target='
+		$path | $eg -v 'target=' | $eg -v '\.(jpg|jpeg|png|svg|mp3|mp4)'
 done
