@@ -404,7 +404,7 @@ wheels = [
 
 [[package]]
 name = "dra-core"
-version = "0.5.0"
+version = "1.0.0"
 source = { directory = "dra-core" }
 dependencies = [
     { name = "anthropic" },

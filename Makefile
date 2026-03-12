@@ -3,7 +3,7 @@ pages_url       := https://the-ai-alliance.github.io/deep-research-agent-for-app
 docs_dir        := docs
 site_dir        := ${docs_dir}/_site
 
-APPS_DIR        := dra-apps
+DRA_APPS_DIR    := dra-apps
 DRA_CORE_DIR    := dra-core
 
 ## Environment variables
@@ -59,7 +59,7 @@ ARXIV_RESEARCH_PROMPT_FILE   ?= arxiv_research_agent.md
 
 # For all apps:
 
-# Relative directory paths are relative to ${APPS_DIR}:
+# Relative directory paths are relative to ${DRA_APPS_DIR}:
 ifeq (finance,${APP})
 	OUTPUT_DIR              ?= output/${APP}/${TICKER}
 	OUTPUT_REPORT           ?= ${TICKER}_report.md
@@ -94,7 +94,7 @@ endif
 TEMPERATURE                ?= 0.7
 MAX_ITERATIONS             ?= 25
 
-clean_code_dirs := logs ${APPS_DIR}/output ${DRA_CORE_DIR}/.hypothesis
+clean_code_dirs := logs ${DRA_APPS_DIR}/output ${DRA_CORE_DIR}/.hypothesis
 clean_doc_dirs  := ${site_dir} ${docs_dir}/.sass-cache
 clean_dirs      := ${clean_code_dirs} ${clean_doc_dirs}
 
@@ -124,6 +124,12 @@ make app-help           # Run the ${APP} application with --help to see the supp
 make app-help-<foo>     # Show help for the <foo> application.
 make app-setup          # One-time setup of the application dependences.
 make test               # Run the automated tests. ("make tests" is a synonym...)
+make build              # Build distributions of the DRA "core" and apps.
+make build-core         # Build a distribution of the DRA "core".
+make build-apps         # Build a distribution of the applications.
+make install            # Install the the DRA "core" and apps locally in development mode.
+make install-core       # Install a distribution of the DRA "core".
+make install-apps       # Install a distribution of the applications.
 
 Targets for the GitHub pages documentation:
 
@@ -212,10 +218,8 @@ endef
 .PHONY: setup-jekyll run-jekyll view-pages view-local clean clean_code clean_docs help
 .PHONY: all-apps all-apps-help app-run do-app-run-${APP} before-app-run app-check setup-output-dir after-app-run
 
-.PHONY: uv-check uv-cmd-check venv-check
-.PHONY: mcp-agent-check test tests
+.PHONY: uv-check uv-cmd-check venv-check mcp-agent-check 
 .PHONY: print-info print-info-app print-make-info print-docs-info show-output-files
-.PHONY: build-dra-core install-dra-core test-dra-core
 
 all list-apps::
 	@echo "Available Apps: ${APPS}"
@@ -229,14 +233,7 @@ apps_help := ${APPS:%=app-help-%}
 ${apps_help}::
 	${MAKE} APP=${@:app-help-%=%} app-help
 
-# DRA Core targets
-build-dra-core::
-	@echo "Building dra-core package..."
-	cd ${DRA_CORE_DIR} && uv build
-
-install-dra-core::
-	@echo "Installing dra-core package in development mode..."
-	cd ${DRA_CORE_DIR} && uv sync
+.PHONY: test tests test-dra-core
 
 test tests test-dra-core::
 	@echo "Running dra-core tests..."
@@ -244,17 +241,18 @@ test tests test-dra-core::
 
 app-run:: before-app-run do-app-run-${APP} after-app-run
 before-app-run:: app-check setup-output-dir
-# Note that OUTPUT_DIR is defined relative to APPS_DIR, but we are currently not in APPS_DIR
+
+# Note that OUTPUT_DIR is defined relative to DRA_APPS_DIR, but we are currently not in DRA_APPS_DIR
 setup-output-dir::
-	@test ! -d "${APPS_DIR}/${OUTPUT_DIR}" || (mv "${APPS_DIR}/${OUTPUT_DIR}" "${APPS_DIR}/${OUTPUT_DIR}"-save-${TIMESTAMP} && echo "*** Moved old "${APPS_DIR}/${OUTPUT_DIR}" to "${APPS_DIR}/${OUTPUT_DIR}"-save-${TIMESTAMP} ***")
-	mkdir -p "${APPS_DIR}/${OUTPUT_DIR}"
+	@test ! -d "${DRA_APPS_DIR}/${OUTPUT_DIR}" || (mv "${DRA_APPS_DIR}/${OUTPUT_DIR}" "${DRA_APPS_DIR}/${OUTPUT_DIR}"-save-${TIMESTAMP} && echo "*** Moved old "${DRA_APPS_DIR}/${OUTPUT_DIR}" to "${DRA_APPS_DIR}/${OUTPUT_DIR}"-save-${TIMESTAMP} ***")
+	mkdir -p "${DRA_APPS_DIR}/${OUTPUT_DIR}"
 	@echo
 after-app-run:: show-output-files
 
 # Application-specific run commands:
 
 do-app-run-finance::
-	cd ${APPS_DIR} && uv run -m ${APP_MODULE} \
+	cd ${DRA_APPS_DIR} && uv run -m ${APP_MODULE} \
 		--ticker "${TICKER}" \
 		--company-name "${COMPANY_NAME}" \
 		--reporting-currency "${REPORTING_CURRENCY}" \
@@ -278,7 +276,7 @@ do-app-run-finance::
 		--verbose ${APP_ARGS}
 		
 do-app-run-medical::
-	cd ${APPS_DIR} && uv run -m ${APP_MODULE} \
+	cd ${DRA_APPS_DIR} && uv run -m ${APP_MODULE} \
 		--query "${QUERY}" \
 		--terms "${TERMS}" \
 		--report-title "${REPORT_TITLE}" \
@@ -295,10 +293,9 @@ do-app-run-medical::
 		--max-cost-dollars ${MAX_COST_DOLLARS} \
 		--max-time-minutes ${MAX_TIME_MINUTES} \
 		--verbose ${APP_ARGS}
-#		--markdown-report "${OUTPUT_REPORT}" 
 		
 do-app-run-arxiv::
-	cd ${APPS_DIR} && uv run -m ${APP_MODULE} \
+	cd ${DRA_APPS_DIR} && uv run -m ${APP_MODULE} \
 		--query "${QUERY}" \
 		--categories "${CATEGORIES}" \
 		--report-title "${REPORT_TITLE}" \
@@ -315,12 +312,32 @@ do-app-run-arxiv::
 		--max-cost-dollars ${MAX_COST_DOLLARS} \
 		--max-time-minutes ${MAX_TIME_MINUTES} \
 		--verbose ${APP_ARGS}
-#		--markdown-report "${OUTPUT_REPORT}" 
 		
 show-output-files::
 	@echo
-	@echo "Output files in ${APPS_DIR}/${OUTPUT_DIR}:"
-	@cd "${APPS_DIR}/${OUTPUT_DIR}" && find . -type f -exec ls -lh {} \;
+	@echo "Output files in ${DRA_APPS_DIR}/${OUTPUT_DIR}:"
+	@cd "${DRA_APPS_DIR}/${OUTPUT_DIR}" && find . -type f -exec ls -lh {} \;
+
+# Build targets
+.PHONY: build build-apps build-core
+
+build:: build-core build-apps
+build-core::
+	@echo "Building dra-core package in ${DRA_CORE_DIR}..."
+	cd ${DRA_CORE_DIR} && uv build && echo "Contents of ${DRA_CORE_DIR}/dist:" && ls -l dist
+build-apps::
+	@echo "Building dra-apps package in ${DRA_APPS_DIR}..."
+	cd ${DRA_APPS_DIR} && uv build && echo "Contents of ${DRA_APPS_DIR}/dist:" && ls -l dist
+
+.PHONY: install install-apps install-core 
+
+install:: install-core install-apps
+install-core::
+	@echo "Installing dra-core package from ${DRA_CORE_DIR} in development mode..."
+	cd ${DRA_CORE_DIR} && uv sync
+install-apps::
+	@echo "Installing dra-apps package from ${DRA_APPS_DIR} in development mode..."
+	cd ${DRA_APPS_DIR} && uv sync
 
 app-check:: uv-check mcp-agent-check
 
@@ -329,7 +346,7 @@ uv-cmd-check::
 	@command -v uv > /dev/null || ( echo ${missing_uv_message} && exit 1 )
 venv-check::
 	[[ -d ${DRA_CORE_DIR}/.venv ]] || (cd ${DRA_CORE_DIR} && uv venv)
-	[[ -d ${APPS_DIR}/../.venv ]] || (cd apps && uv venv)
+	[[ -d ${DRA_APPS_DIR}/../.venv ]] || (cd apps && uv venv)
 
 mcp-agent-check::
 	@cd ${DRA_CORE_DIR} && uv pip freeze | grep mcp-agent > /dev/null || ( echo ${missing_mcp_agent_message} && exit 1 )
@@ -342,8 +359,8 @@ app-setup:: uv-check venv-check install-dra-core
 
 app-help app-run-help:: app-help-header app-help-footer
 app-help-header::
-	@echo "Application help provided by ${APPS_DIR}/${REL_APP_PATH}:"
-	cd ${APPS_DIR} && uv run -m ${APP_MODULE} --help
+	@echo "Application help provided by ${DRA_APPS_DIR}/${REL_APP_PATH}:"
+	cd ${DRA_APPS_DIR} && uv run -m ${APP_MODULE} --help
 	@echo
 app-help-footer::
 	$(info ${app_help_footer})
@@ -359,7 +376,7 @@ print-info: print-info-app print-make-info print-docs-info
 ${APPS:%=print-info-app-%}:
 	@make APP=${@:print-info-app-%=%} print-info-app
 print-info-app:
-	@echo "Relative paths shown are relative to the directory '${APPS_DIR}'."
+	@echo "Relative paths shown are relative to the directory '${DRA_APPS_DIR}'."
 	@echo
 	@echo "This application:"
 	@echo "  APP                          '${APP}'"
