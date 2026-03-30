@@ -20,7 +20,6 @@ from dra.core.common.utils.io import UserPrompts
 from dra.core.common.utils.main import ParserUtil, Runner
 from dra.core.common.utils.paths import resolve_path, resolve_and_require_path
 from dra.core.common.variables import Variable
-from dra.core.ux.display import Display
 
 def get_server_list() -> list[str]:
     """Define the list of tools and services to use for this app."""

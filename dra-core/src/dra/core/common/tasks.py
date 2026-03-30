@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Allow types to self-reference during their definitions.
 from __future__ import annotations
 

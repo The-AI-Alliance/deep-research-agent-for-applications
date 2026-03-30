@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Allow types to self-reference during their definitions.
 from __future__ import annotations
 import asyncio
@@ -129,7 +128,7 @@ class DeepResearch():
                 except asyncio.CancelledError:
                     pass
 
-        await self.display.run_live(do_work)
+        await self.display.run_live(do_work())
 
     async def __finish_init(self):
         """

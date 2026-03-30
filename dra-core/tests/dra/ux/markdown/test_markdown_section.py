@@ -44,7 +44,7 @@ class TestMarkdownSection(unittest.TestCase):
         with self.assertRaises(AssertionError):
             MarkdownSection('', level)
         with self.assertRaises(AssertionError):
-            MarkdownSection(None, level)
+            MarkdownSection(None, level) # ty: ignore[invalid-argument-type]
 
     @given(no_linefeeds_nonempty_text())
     def test_make_section_with_title_has_level_1_and_no_content_nor_subsections(self, title: str):
@@ -79,30 +79,15 @@ class TestMarkdownSection(unittest.TestCase):
         no_linefeeds_nonempty_text(), 
         st.lists(st.text()),
         st.lists(no_linefeeds_nonempty_text(), max_size=5, unique_by = str))
-    def test_make_section_with_title_with_content_and_subsections_as_a_dict(self, 
+    def test_make_section_with_title_with_content_and_subsections(self, 
         level: int, title: str, content: list[str], subsection_titles: list[str]):
         """
         Verify that a section with level, title, initial content, and initial 
         subsections dict is properly formed.
         """
         content_l = [MarkdownElement(l) for l in content]
-        subsections_d = dict([(t, MarkdownSection(t, level+1, ['lorem ipsum'])) for t in subsection_titles])
-        section = MarkdownSection(title, level, content, subsections_d)
-        self.assert_section_valid(section, title, level, content_l, subsections_d)
-
-    @given(st.integers(min_value=1, max_value=4), 
-        no_linefeeds_nonempty_text(), 
-        st.lists(st.text()),
-        st.lists(no_linefeeds_nonempty_text(), max_size=5, unique_by = str))
-    def test_make_section_with_title_with_content_and_subsections_as_a_list(self, 
-        level: int, title: str, content: list[str], subsection_titles: list[str]):
-        """
-        Verify that a section with level, title, initial content, and initial 
-        subsections list is properly formed.
-        """
-        content_l = [MarkdownElement(l) for l in content]
         subsections_l = [MarkdownSection(t, level+1, ['lorem ipsum']) for t in subsection_titles]
-        subsections_d = dict([(ss.title, ss) for ss in subsections_l])
+        subsections_d = dict([(ms.title, ms) for ms in subsections_l])
         section = MarkdownSection(title, level, content, subsections_l)
         self.assert_section_valid(section, title, level, content_l, subsections_d)
 
@@ -168,30 +153,28 @@ class TestMarkdownSection(unittest.TestCase):
         self.assert_section_valid(section, title, level, [], {})
         section.add_subsections(subsections_l)
         self.assert_section_valid(section, title, level, [], subsections_d)
-        new_ss = dict([(ss.title+'2', ss) for ss in subsections_l])
-        # print(f"new: {[t[0] for t in new_ss]}, existing keys = {subsections_d.keys()}")
-        section.add_subsections(new_ss)
+        new_ss_l = [(ss.title+'2', ss) for ss in subsections_l]
+        new_ss_d = dict([(ss.title, ss) for ss in new_ss_l])
+        section.add_subsections(new_ss_l)
         all_ss = subsections_d.copy()
-        all_ss.update(new_ss)
+        all_ss.update(new_ss_d)
         self.assert_section_valid(section, title, level, [], all_ss)
 
     @given(st.integers(min_value=1, max_value=4), 
         no_linefeeds_nonempty_text(), 
         st.lists(no_linefeeds_nonempty_text(), max_size=5, unique_by = str))
-    def test_subsections_must_have_new_unique_keys(self, 
+    def test_subsections_must_have_new_unique_titles(self, 
         level: int, title: str, subsection_titles: list[str]):
         """
         Verify that when adding subsections, they all have new, unique keys not already
         in the subsection dictionary.
         """
-        subsections_d = dict([(t, MarkdownSection(t, level+1, ['lorem ipsum'])) for t in subsection_titles])
-        section = MarkdownSection(title, level, [], subsections_d)
+        subsections_l = [MarkdownSection(t, level+1, ['lorem ipsum']) for t in subsection_titles]
+        section = MarkdownSection(title, level, [], subsections_l)
         # Try re-adding each one.
-        for key, ss in subsections_d.items():
+        for ss in subsections_l:
             with self.assertRaises(ValueError):
                 section.add_subsections([ss])
-            with self.assertRaises(ValueError):
-                section.add_subsections({key:ss})
 
     @given(st.integers(min_value=1, max_value=4), 
         no_linefeeds_nonempty_text())
@@ -202,10 +185,10 @@ class TestMarkdownSection(unittest.TestCase):
         """
         elem = MarkdownElement('Bad')
         with self.assertRaises(ValueError):
-            MarkdownSection(title, level, [], [elem])
+            MarkdownSection(title, level, [], [elem]) # ty: ignore[invalid-argument-type]
         section = MarkdownSection(title, level)
         with self.assertRaises(ValueError):
-            section.add_subsections([elem])
+            section.add_subsections([elem]) # ty: ignore[invalid-argument-type]
 
     @given(st.integers(min_value=1, max_value=4), 
         no_linefeeds_nonempty_text())
@@ -248,12 +231,12 @@ class TestMarkdownSection(unittest.TestCase):
         subsections_l2 = [MarkdownSection(t+'2', level+1, ['lorem ipsum']) for t in subsection_titles]
         subsections_d = dict([(ss.title, ss) for ss in subsections_l])
         subsections_d2 = dict([(ss.title, ss) for ss in subsections_l2])
-        section = MarkdownSection(title, level, [], subsections_d)
+        section = MarkdownSection(title, level, [], subsections_l)
         section.set_subsections(subsections_l2)
         self.assertEqual(len(subsections_l2), len(section.subsections))
         for ss in subsections_l2:
             self.assertEqual(ss, section[ss.title], f"key = {ss.title}")
-        section.set_subsections(subsections_d2)
+        section.set_subsections(subsections_l2)
         self.assertEqual(len(subsections_d2), len(section.subsections))
         for key,ss in subsections_d2.items():
             self.assertEqual(ss, section[key], f"key = {key}")
@@ -306,7 +289,7 @@ class TestMarkdownSection(unittest.TestCase):
 
         # sanity check: Make SURE we don't have duplicate ss titles and hence fewer dict entries!
         self.assertEqual(len(subsections_l), len(subsections_d)) 
-        section = MarkdownSection(title, level, content_l, subsections_d)
+        section = MarkdownSection(title, level, content_l, subsections_l)
         self.assert_section_valid(section, title, level, content_l, subsections_d)
         s = str(section)
         all_lines = s.split('\n')

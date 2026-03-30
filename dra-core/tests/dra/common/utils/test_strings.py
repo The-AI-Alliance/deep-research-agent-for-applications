@@ -2,9 +2,9 @@
 # https://hypothesis.readthedocs.io/en/latest/
 
 from hypothesis import given, strategies as st
-import unittest
+import os, re, sys, unittest
 from pathlib import Path
-import os, re, sys
+from typing import Any
 
 from tests.dra.utils import (
     no_brace_text,
@@ -44,7 +44,7 @@ class TestStringUtils(unittest.TestCase):
         key_strs = ['{{'+key+'}}' for key in kvs.keys()]
         text = f"{prefix_suffix}{delimiter.join(key_strs)}{prefix_suffix}"
         et = f"{prefix_suffix}{delimiter.join(kvs.values())}{prefix_suffix}"
-        at = replace_variables(text, **kvs)
+        at = replace_variables(text, variables=kvs)
         expected_text = et.strip()
         actual_text = at.strip()
         self.assertEqual(expected_text, actual_text,
@@ -73,7 +73,7 @@ class TestStringUtils(unittest.TestCase):
         st.sampled_from(['  ', '--']),
         st.sampled_from(["%s", '**%s:%%', '_%s_', '**_%s:_**']))
     def test_MarkdownUtil_to_markdown_returns_list_of_formatted_strings(self, 
-        kvs1: dict[str, any], kvs2: dict[str, any], 
+        kvs1: dict[str, Any], kvs2: dict[str, Any], 
         int_val: int, float_val: float, tuple_val: tuple[str, str],
         bullet: str, indent: str, key_format: str):
         """

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 The Markdown-formatted streaming output version of Deep Orchestrator Research Example
 """
@@ -12,7 +11,7 @@ import time
 from datetime import datetime, timedelta
 from json.decoder import JSONDecodeError
 from pathlib import Path
-from typing import cast, Callable, Generic
+from typing import cast, Any, Generic
 
 from mcp_agent.workflows.deep_orchestrator.orchestrator import DeepOrchestrator
 from openai.types.chat import ChatCompletionMessage
@@ -46,7 +45,7 @@ class MarkdownDeepOrchestratorMonitor():
         budget.get_remaining()
 
         table = MarkdownTable(title="💰 Budget")
-        table.add_columns([
+        table.add_columns_with_justifications([
             ("Resource", 'left'),
             ("Used",     'right'),
             ("Limit",    'right'),
@@ -342,14 +341,14 @@ class MarkdownObserver(Observer[DeepResearch]):
         self.title = title
         self.yaml_header_template = yaml_header_template
         # Lazy initialize these in `_after_set_system()`.
-        self.monitor: MarkdownDeepOrchestratorMonitor = None
-        self.orchestrator: DeepOrchestrator = None
+        # self.monitor: MarkdownDeepOrchestratorMonitor = None
+        # self.orchestrator: DeepOrchestrator = None
 
     def _after_set_system(self):
         """
         Once the system is set, we finish initializing this object.
         """ 
-        self.system.logger.info("MarkdownDisplay._after_set_system() (self.system not None)")
+        self.system.logger.info("MarkdownObserver._after_set_system() (self.system not None)")
         self.orchestrator = self.system.orchestrator
         self.monitor = MarkdownDeepOrchestratorMonitor(self.orchestrator)
 
@@ -362,13 +361,13 @@ class MarkdownObserver(Observer[DeepResearch]):
         super()._after_set_system()
 
     def _do_update(self, 
-        other: dict[str,any] = {},
-        is_final: bool = False) -> any:
+        other: dict[str,Any] = {},
+        is_final: bool = False) -> Any:
         """
         Update the display with the current state. Because the final Markdown report 
         is all we care about, we don't do anything unless `is_final == True`! 
         """
-        # self.system.logger.info(f"MarkdownDisplay._do_update(is_final={is_final})")
+        # self.system.logger.info(f"MarkdownObserver._do_update(is_final={is_final})")
         
         if not is_final:
             return self.layout
@@ -406,13 +405,13 @@ class MarkdownObserver(Observer[DeepResearch]):
         return self.layout
 
     async def async_update(self,
-        other: dict[str,any] = {},
-        is_final: bool = False) -> any:
+        other: dict[str,Any] = {},
+        is_final: bool = False) -> Any:
         if not is_final:
             return None
         return await self.__update_token_usage()
 
-    def __get_var_value(self, key: str, default: any = None) -> any:
+    def __get_var_value(self, key: str, default: Any = None) -> Any:
         if not self.system:
             raise ValueError("Logic error: self.system not yet initialized!")
         variable = self.system.variables.get(key)
@@ -486,7 +485,7 @@ class MarkdownObserver(Observer[DeepResearch]):
         self.layout.add_subsections([section])
         return section
 
-    def __parse_openai_message(self, message_index: int, obj: any) -> list[any]:
+    def __parse_openai_message(self, message_index: int, obj: Any) -> list[Any]:
         # For inference with OpenAI, the results will be a ChatCompletionMessage:
 
         def make_metadata_table_from_dict(
@@ -503,7 +502,7 @@ class MarkdownObserver(Observer[DeepResearch]):
             return table
 
         sobj = str(obj)
-        content: list[any] = []
+        content: list[Any] = []
         metadata_table: MarkdownTable = None
 
         if isinstance(obj, ChatCompletionMessage):
@@ -525,7 +524,7 @@ class MarkdownObserver(Observer[DeepResearch]):
             except:  # bail out...
                 content = [f"> {line}" for line in sobj.split('\n')]
           
-        all_content: list[any] = []
+        all_content: list[Any] = []
         if content:
             all_content = ['\n', f"✉️ Reply Message #{message_index} Content:", '\n']
             all_content.extend(content)
@@ -536,7 +535,7 @@ class MarkdownObserver(Observer[DeepResearch]):
 
         return all_content
 
-    def __parse_anthropic_message(self, message_index: int, obj: any) -> list[any]:
+    def __parse_anthropic_message(self, message_index: int, obj: Any) -> list[Any]:
         def make_metadata_table(
             subtype: str,
             duration_ms: int,
@@ -545,9 +544,9 @@ class MarkdownObserver(Observer[DeepResearch]):
             num_turns: int,
             session_id: str,
             total_cost_usd: float | None = None,
-            usage: dict[str, any] | None = None, 
-            result: any = None,
-            structured_output: any = None) -> MarkdownTable:
+            usage: dict[str, Any] | None = None, 
+            result: Any = None,
+            structured_output: Any = None) -> MarkdownTable:
             table = MarkdownTable(title=f"✉️ Anthropic Reply Message #{message_index}: Metadata",
                 columns = [('Item', 'left'), ('Value', 'right')])
             table.add_row(['subtype', subtype])
@@ -564,7 +563,7 @@ class MarkdownObserver(Observer[DeepResearch]):
             return table
 
         sobj = str(obj)
-        content: list[any] = []
+        content: list[Any] = []
         metadata_table: MarkdownTable = None
 
         if isinstance(obj, Message):
@@ -594,7 +593,7 @@ class MarkdownObserver(Observer[DeepResearch]):
             except:  # bail out...
                 content = results.split('\n')
 
-        all_content: list[any] = []
+        all_content: list[Any] = []
         if content:
             all_content = ['\n', f"**Reply Message #{message_index} Result:**", '\n']
             all_content.extend(content)
@@ -605,7 +604,7 @@ class MarkdownObserver(Observer[DeepResearch]):
 
         return all_content
 
-    def __handle_content(self, content: list[any]) -> (list[str], bool)
+    def __handle_content(self, content: list[Any]) -> (list[str], bool)
         """
         What we hope is that the content returned by messages is Markdown, 
         e.g., "[```markdown", "...", "```"]. If so, we remove the leading and
@@ -618,7 +617,7 @@ class MarkdownObserver(Observer[DeepResearch]):
         try:
             for line in content:
                 if re.match(r'^\s*```(markdown|md)\s*$', line):
-                    is_md = true
+                    is_md = True
                 elif not re.match(r'^\s*```\s*$', '', line):
                     result.append(line)
         except:

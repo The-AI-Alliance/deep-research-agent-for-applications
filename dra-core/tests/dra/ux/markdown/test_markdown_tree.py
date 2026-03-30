@@ -92,9 +92,9 @@ class TestMarkdownTree(unittest.TestCase):
         self.assertEqual(tree.bullet, bullet)
         self.assertEqual(tree.children, [])
         self.assertEqual(tree.indentation, None)
-        children = [MarkdownTree(label = c, bullet = bullet) for c in children]
-        tree.add_children(children)
-        self.assertEqual(tree.children, children)
+        children_mt = [MarkdownTree(label = c, bullet = bullet) for c in children]
+        tree.add_children(children_mt)
+        self.assertEqual(tree.children, children_mt)
 
     @given(no_linefeeds_text(), st.sampled_from(['*', '-']), 
         st.sampled_from(['  ', '    ', '\t', '\t\t']), 

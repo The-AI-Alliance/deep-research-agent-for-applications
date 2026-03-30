@@ -1,4 +1,4 @@
-from typing import Callable, Generic, TypeVar
+from typing import Any, Generic, TypeVar
 from dra.core.common.variables import Variable
 
 SYSTEM = TypeVar("SYSTEM")
@@ -24,20 +24,20 @@ class Observer(Generic[SYSTEM]):
         self.resume()
 
     def update(self, 
-        system: SYSTEM = None,
-        other: dict[str,any] = {},
-        is_final: bool = False) -> any:
+        system: SYSTEM | None = None,
+        other: dict[str,Any] = {},
+        is_final: bool = False) -> Any:
         """
         Update the observer with a possibly-new system to observe. See also 
         `_before_set_system()` and `_after_set_system()`.
 
         Args:
             system (SYSTEM): If not `None` and not equal to `self.system`, then `self.system` is assigned to it.
-            other (dict[str,any]): Is a hook to provide additional data to observers that is is transparent to this class.
+            other (dict[str,Any]): Is a hook to provide additional data to observers that is is transparent to this class.
             is_final (bool): Pass `True` for the last call to update the observer before the application exits.
 
         Returns:
-            any: The return value is up to derived classes. We return `None` if `self.system != None` and we aren't paused, or the returned value from `_do_update()`.
+            Any: The return value is up to derived classes. We return `None` if `self.system != None` and we aren't paused, or the returned value from `_do_update()`.
 
         Discussion:
             Derived classes should only override _do_update(), which is called only if `self.system != None` and we aren't paused.
@@ -50,14 +50,14 @@ class Observer(Generic[SYSTEM]):
             return None
 
     async def async_update(self,
-        other: dict[str,any] = {},
-        is_final: bool = False) -> any:
+        other: dict[str,Any] = {},
+        is_final: bool = False) -> Any:
         """A hack to support cases where updates have to be asynchronous."""
         pass
 
     def _do_update(self, 
-        other: dict[str,any] = {},
-        is_final: bool = False) -> any:
+        other: dict[str,Any] = {},
+        is_final: bool = False) -> Any:
         """
         Derived classes override this method for customizing update logic. This method is only
         called if `self.system != None` and we aren't paused, so it is safe to do any update
@@ -167,15 +167,15 @@ class Observers(Observer):
         self.observers.update(extras)
 
     async def async_update(self,
-        other: dict[str,any] = {},
-        is_final: bool = False) -> any:
+        other: dict[str,Any] = {},
+        is_final: bool = False) -> Any:
         """A hack to support cases where updates have to be asynchronous."""
         for observer in self.observers.values():
             await observer.async_update(is_final=is_final, other=other)
 
     def _do_update(self, 
-        other: dict[str,any] = {},
-        is_final: bool = False) -> any:
+        other: dict[str,Any] = {},
+        is_final: bool = False) -> Any:
         """Returns a dict of the results returned from each `observer.update()` call."""
         d = {}
         for key, observer in self.observers.items():

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 "MarkdownElements" represent major sections of a markdown document, like sections, tables, etc.
 """
@@ -10,9 +9,10 @@ import os
 import re
 import sys
 import time
+from collections.abc import Mapping, Sequence
 from datetime import datetime
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 from mcp_agent.workflows.deep_orchestrator.orchestrator import DeepOrchestrator
 from mcp_agent.workflows.deep_orchestrator.config import DeepOrchestratorConfig
@@ -31,7 +31,7 @@ class MarkdownElement():
     def __repr__(self) -> str:
         return self.title
 
-    def __eq__(self, other: any) -> bool:
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, MarkdownElement):
             return False
         return self.title == other.title
@@ -40,12 +40,12 @@ class MarkdownSection(MarkdownElement):
     def __init__(self, 
         title: str,
         level: int = 1,
-        content: list[MarkdownElement | str] = [],
-        subsections: dict[str,MarkdownElement] = {}):
+        content: Sequence[MarkdownElement | str] = [],
+        subsections: Sequence[MarkdownSection] = []):
         """
         Construct a Markdown section with heading level, title string, and an optional 
-        list of strings and `MarkdownElements` for the initial content, and an optional
-        dictionary of subsections.
+        `Sequence` (used instead of `list` for type checking...) for the initial content
+        of strings or `MarkdownElements`, and an optional list of subsections.
         The level >= 1, although numbers bigger than 6 or so don't make much sense.
         The title must be non-empty, since it is needed to render the section header.
         Don't pass `MarkdownSections` as `content`; use the `subsections` instead.
@@ -57,11 +57,11 @@ class MarkdownSection(MarkdownElement):
         # we store the content in a map by keys and rely on the python Dict 
         # implementation feature that insertion order is preserved.
         self.content: list[MarkdownElement] = []
-        self.subsections: list[MarkdownElement] = {}
+        self.subsections: dict[str,MarkdownSection] = {}
         self.add_intro_content(content)
         self.add_subsections(subsections)
 
-    def set_intro_content(self, content: list[MarkdownElement | str]) -> str:
+    def set_intro_content(self, content: Sequence[MarkdownElement | str]):
         """
         Replace the lines (or elements like tables, ...) for the content at the top
         of the section. Note that subsections added using `add_subsections` 
@@ -71,7 +71,7 @@ class MarkdownSection(MarkdownElement):
         self.content = []
         self.add_intro_content(content)
 
-    def add_intro_content(self, content: list[MarkdownElement | str]) -> str:
+    def add_intro_content(self, content: Sequence[MarkdownElement | str]):
         """
         Add lines (or elements like tables, ...) to the content at the top
         of the section. Note that subsections added using `add_subsections` 
@@ -86,7 +86,7 @@ class MarkdownSection(MarkdownElement):
             else:
                 self.content.append(MarkdownElement(title=str(item)))
 
-    def set_subsections(self, subsections: dict[str, MarkdownSection] | list[MarkdownSection]):
+    def set_subsections(self, subsections: list[MarkdownSection]):
         """
         Replace the subsections.
         NOTE: All the levels will be reset to to the parent's level + 1, unless they
@@ -95,21 +95,18 @@ class MarkdownSection(MarkdownElement):
         self.subsections = {}
         self.add_subsections(subsections)
         
-    def add_subsections(self, subsections: dict[str,MarkdownSection] | list[MarkdownSection]):
+    def add_subsections(self, subsections: list[MarkdownSection]):
         """
         Add subsections. They will be stored in a dictionary ordered by insertion order
         (a Python dict implementation feature...), which we need to support rendering in
         the correct order. So, insert the subsections in the correct order for displaying.
-        Use a dict argument if you want to specify the keys. If you pass a list, the
-        element titles will be used as the keys. Hence, use non-empty titles for any 
+        The element titles will be used as the keys. Hence, use non-empty titles for any 
         subsections provided. Storing in a dict allows subsequent updating of a subsection
-        by referring to it by its key. Similarly, a `ValueError` is raised if any keys in 
-        the new subsections that already exist in the current subsections.
+        by referring to it by its key. However, this method raises a `ValueError` if any
+        keys in the new subsections already exist in the current subsections.
         NOTE: All the levels will be reset as needed to be >= the parent's level + 1.
         """
-        ss = subsections
-        if type(subsections) is list:
-            ss = dict([(s.title, s) for s in subsections])
+        ss = dict([(s.title, s) for s in subsections])
 
         bad_elements = []
         bad_keys = []
@@ -145,7 +142,7 @@ class MarkdownSection(MarkdownElement):
                 s.level = self.level+1 # reset!
             s._fix_levels()
 
-    def __setitem__(self, key: str, item: MarkdownElement):
+    def __setitem__(self, key: str, item: MarkdownSection):
         """
         Allow dictionary-like indexing of subsections.
         While you can replace a subsection this way, you can also just fetch
@@ -153,7 +150,7 @@ class MarkdownSection(MarkdownElement):
         """
         self.subsections[key] = item
 
-    def __getitem__(self, key: str) -> MarkdownElement:
+    def __getitem__(self, key: str) -> MarkdownSection:
         """
         Allow dictionary-like indexing of subsections.
         While you can replace a subsection this way, you can also just fetch
@@ -169,75 +166,70 @@ class MarkdownSection(MarkdownElement):
         subsections_str = '\n'.join([ss(k,s) for k,s in self.subsections.items()])
         return f"{self.level*'#'} {self.title}\n\n{content_str}\n{subsections_str}"
 
-    def __eq__(self, other: any) -> bool:
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, MarkdownSection):
-            return false
+            return False
         return  self.level == other.level \
             and self.content == other.content \
             and self.subsections == other.subsections
         
 class MarkdownTable(MarkdownElement):
-    def __init__(self, title: str = '', columns: list[str] | list[tuple[str,str]] = []):
+    def __init__(self, title: str = '', columns: Sequence[str] = [], columns_with_justifications: Sequence[tuple[str,str]] = []):
+        """Only one of `columns` and `columns_with_justifications` can be non-empty!"""
         super().__init__(title)
-        self.columns: [str] = []
-        self.columns_justifications: [str] = []
+        assert not columns or not columns_with_justifications
+        self.columns: list[str] = []
+        self.columns_justifications: list[str] = []
         self.rows = []
-        self.add_columns(columns)
+        if columns:
+            self.add_columns(columns)
+        if columns:
+            self.add_columns_with_justifications(columns_with_justifications)
 
-    def add_columns(self, columns: list[str] | list[tuple[str,str]]):
+    def add_columns(self, columns: Sequence[str]):
         """
-        Append one or more columns to the list of columns.
-        If the input is a list of strings, then they are the column names
-        and all will be left justified.
-        If the input is a list of two-tuples, then the first elements are 
-        the column names and the second elements are the justification strings,
-        where the allowed justification values are:
+        Append one or more columns to the list of columns, using left justification for all of them.
+        """
+        self.add_columns_with_justifications([(c, 'left') for c in columns])
+
+    def add_columns_with_justifications(self, columns: Sequence[tuple[str,str]]):
+        """
+        Append one or more columns to the list of columns. In the tuples,
+        the first elements are the column names and the second elements are
+        the justification strings, where the allowed justification values are:
         * `left`   means left justification 
         * `center` means center justification 
         * `right`  means right justification 
-        Left justification is the default, so `` and `None` 
-        are interpreted as left justification.
+        Left justification is the default, so `` is interpreted as left justification.
         """
         if len(columns) == 0:
             return 
-        match self.__which_type(columns):
-            case 'list[str]':
-                self.columns.extend(columns)
-                self.columns_justifications.extend([MarkdownTable.justify(c, 'left') for c in columns])
-            case 'list[tuple]':
-                self.columns.extend([c[0] for c in columns])
-                self.columns_justifications.extend([MarkdownTable.justify(c[0], c[1]) for c in columns])
-            case s:
-                raise ValueError(f"Bad type for input columns: {type(columns)} ('{s}' was returned by __which_types()) (columns = {columns})")
+        self.columns.extend([c[0] for c in columns])
+        self.columns_justifications.extend([MarkdownTable.justify(c[0], c[1]) for c in columns])
 
-    def add_row(self, row: list[any] | list[tuple[str,any]] | dict[str,any]):
+    def add_row(self, row: Sequence[Any]):
         """
-        Add a row of values to the table.
-        If a list of values is passed in, the number of values must match the number of columns!
-        If a list of tuples or a dict is passed in, then the keys must be in the set of columns and
-        empty values will be used for the unspecified cells.
+        Add a row of values to the table. The length of `row` must match the number of columns.
         """
+        if len(row) != len(self.columns):
+            raise ValueError(f"Wrong number of cells in row: {len(row)}. Expected {len(self.columns)}.")
+        self.rows.append(row)
 
-        match self.__which_type(row):
-            case 'list[str]':
-                if len(row) != len(self.columns):
-                    raise ValueError(f"Wrong number of cells in row: {len(row)}. Expected {len(self.columns)}.")
-                self.rows.append(row)
-            case 'list[tuple]':
-                self.rows.append(self.row_dict_to_list(dict(row)))
-            case 'dict':
-                self.rows.append(self.row_dict_to_list(row))
-
-    def row_dict_to_list(self, row_dict: dict[str,any]) -> list[any]:
+    def add_row_with_dict(self, row: Mapping[str,Any]):
+        """
+        Add a row of values to the table, where the "cells" are specified in a dictionary 
+        where the keys must be in the set of column names and empty values will be used
+        for the unspecified cells.
+        """
         # Check that no unknown columns are specified.
         names = set(self.columns)
-        keys = set(row_dict.keys())
+        keys = set(row.keys())
         if names.union(keys) != names:
             raise ValueError(f"At least one unexpected column name <{keys}> that isn't in the set of columns = <{names}>")
-        new_row = [row_dict.get(name, '') for name in self.columns]
-        return new_row
+        new_row = [row.get(name, '') for name in self.columns]
+        self.rows.append(new_row)
 
-    justifications = {'left', 'center', 'full', 'right', '', None}
+    justifications = {'left', 'center', 'full', 'right', ''}
 
     def is_justification(value: str) -> bool:
         return value in MarkdownTable.justifications
@@ -249,12 +241,12 @@ class MarkdownTable(MarkdownElement):
             num_dashes = len(column_name) - 2 if len(column_name) > 2 else 1
             dashes = '-'*(num_dashes)
             match justification:
-                case 'left' | '' | None:
-                    return f':{dashes}-'
                 case 'right':
                     return f'-{dashes}:'
                 case 'center' | 'full':
                     return f':{dashes}:'
+                case _:  # 'left' | '' (other possibilities filtered by is_justifications())
+                    return f':{dashes}-'
 
     def __repr__(self) -> str:
         title_str = '\n\n'
@@ -269,36 +261,36 @@ class MarkdownTable(MarkdownElement):
             rows_strs = [ self.__make_row(row) for row in self.rows ]
             return f"{title_str}{columns_str}\n{columns_justifications_str}\n{'\n'.join(rows_strs)}\n"
 
-    def __which_type(self, values: list[str] | list[tuple[str,any]] | dict[str,any]) -> str | None:
+    def __which_type(self, values: Sequence[str] | Sequence[tuple[str,Any]] | Mapping[str,Any]) -> str | None:
+        """Return a string with the type for `values`. If empty, then `Sequence[str]` is returned."""
         def type_error():
-            tcol  = f"type(values) = <{type(values)}>,"
-            t0col = f"type(values[0]) = <{type(values[0])}>,"
-            raise ValueError(f"Unexpected argument type: {tcol} {t0col} values = <{values}>")
+            tcol  = f"type(values) = <{type(values)}>"
+            raise ValueError(f"Unexpected argument type: {tcol}, values = <{values}>")
 
         if len(values) == 0:
-            return 0
-        elif type(values) is list:
+            return 'Sequence[str]'
+        elif type(values) is Sequence:
             t0 = type(values[0])
             if t0 is str:
-                return 'list[str]'
+                return 'Sequence[str]'
             elif t0 is tuple:
-                return 'list[tuple]'
+                return 'Sequence[tuple]'
             else:
                 type_error()
-        elif type(values) is dict:
-            return 'dict'
+        elif type(values) is Mapping:
+            return 'Mapping'
         else:
             type_error()
 
-    def __make_row(self, values: list[any]) -> str:
+    def __make_row(self, values: Sequence[Any]) -> str:
         if len(values) == 0:
             return '' 
         else:
             return f"| {' | '.join([str(v) for v in values])} |"
 
-    def __eq__(self, other: any) -> bool:
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, MarkdownTable):
-            return false
+            return False
         return  self.columns == other.columns \
             and self.columns_justifications == other.columns_justifications \
             and self.rows == other.rows
@@ -312,10 +304,10 @@ class MarkdownTree(MarkdownElement):
 
     def __init__(self, 
         label: str | int | float, 
-        bullet: str = None, 
-        indentation: str = None):
-        super().__init__(label)
-        self.children: [MarkdownTree] = []
+        bullet: str | None = None, 
+        indentation: str | None = None):
+        super().__init__(str(label))
+        self.children: list[MarkdownTree] = []
         self.label = label
         self.bullet = bullet
         if bullet:
@@ -343,19 +335,19 @@ class MarkdownTree(MarkdownElement):
         self.children.append(c)
         return c
 
-    def add_children(self, children: list[MarkdownElement | str]) -> list[MarkdownElement]:
+    def add_children(self, children: Sequence[MarkdownElement | str]) -> Sequence[MarkdownElement]:
         """
         Add multiple sub bullets and return them.
         Python doesn't allow the `children` or return type to be declared
-        `list[MarkdownTree]`, because `MarkdownTree` is being defined! However,
+        `Sequence[MarkdownTree]`, because `MarkdownTree` is being defined! However,
         we convert the `children` to trees, if they are not trees already, and 
         we return the list of trees, even though the declaration suggests a
-        `list[MarkdownElement]` can be returned.
+        `Sequence[MarkdownElement]` can be returned.
         """
         return [self.add(child) for child in children]
 
     def __tri(self, first: str | None, second: str | None, third: str, 
-        check: Callable[[str],str | None] = lambda s: s) -> str:
+        check: Callable[[str | None],str] = lambda s: str(s)) -> str:
         if first:
             return check(first)
         elif second:
@@ -363,7 +355,7 @@ class MarkdownTree(MarkdownElement):
         else:
             return check(third)
 
-    def as_strs(self, level: int, parent_bullet: str, parent_indent: str) -> list[str]:
+    def as_strs(self, level: int, parent_bullet: str, parent_indent: str) -> Sequence[str]:
         bullet = self.get_bullet(default=parent_bullet)
         indent = self.get_indentation(default=parent_indent)
         indent_str = level*indent
@@ -374,12 +366,12 @@ class MarkdownTree(MarkdownElement):
         #return [f"{indent_str}{line}" for line in lines]
 
     def __repr__(self) -> str:
-        return "\n".join(self.as_strs(0, self.bullet, self.indentation))
+        return "\n".join(self.as_strs(0, self.get_bullet(), self.get_indentation()))
 
     number_re = re.compile(r'^\d+$')
     letter_re = re.compile(r'^\W$')
 
-    def get_bullet(self, default: str = None) -> str:
+    def get_bullet(self, default: str | None = None) -> str:
         """
         Return the defined bullet, or return `default`, if defined,
         or else return `MarkdownTree.default_bullet`.
@@ -387,29 +379,31 @@ class MarkdownTree(MarkdownElement):
         return self.__tri(self.bullet, default, MarkdownTree.default_bullet,
             MarkdownTree.enforce_valid_bullet)
 
-    def get_indentation(self, default: str = None) -> str:
+    def get_indentation(self, default: str | None = None) -> str:
         """
         Return the defined indentation, or return `default`, if defined,
         or else return `MarkdownTree.default_indentation`.
         """
         return self.__tri(self.indentation, default, MarkdownTree.default_indentation)
 
-    def enforce_valid_bullet(bullet: str) -> str:
+    def enforce_valid_bullet(bullet: str | None) -> str:
         if MarkdownTree.validate_bullet(bullet):
-            return bullet
+            return str(bullet)  # Wrap in str() to make ty typechecker happy.
         else:
             raise ValueError(f"Disallowed bullet value {bullet}. Must be '*', '-', a number, or a letter.")
 
-    def validate_bullet(bullet: str) -> bool:
-        if bullet == '*' or bullet == '-' \
+    def validate_bullet(bullet: str | None) -> bool:
+        if not bullet:
+            return False
+        elif bullet == '*' or bullet == '-' \
             or MarkdownTree.number_re.match(bullet) or MarkdownTree.letter_re.match(bullet):
             return True 
         else:
             return False
 
-    def __eq__(self, other: any) -> bool:
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, MarkdownTree):
-            return false
+            return False
         return  self.label == other.label \
             and self.get_bullet() == other.get_bullet() \
             and self.get_indentation() == other.get_indentation() \

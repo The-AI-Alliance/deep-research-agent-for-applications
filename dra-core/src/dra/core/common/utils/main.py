@@ -7,7 +7,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 from mcp_agent.workflows.deep_orchestrator.config import DeepOrchestratorConfig
 
@@ -31,7 +31,7 @@ class ParserUtil():
 
         self.parser = self.make_parser()
         self.args: argparse.Namespace = None      # set by self.process_args()
-        self.processed_args: dict[str,any] = {}   # set by  self.process_args()
+        self.processed_args: dict[str,Any] = {}   # set by  self.process_args()
 
         self.defaults = {
             'report-title': None,
@@ -323,8 +323,8 @@ class ParserUtil():
         }
         self.processed_args.update(prompted_values)
 
-    def only_verbose(self, formatter: str = 'str') -> str | None:
-        return formatter if self.args.verbose else None
+    def only_verbose(self, formatter: str = 'str') -> str:
+        return formatter if self.args.verbose else ''
 
     def common_variables(self) -> list[Variable]:    
         return [

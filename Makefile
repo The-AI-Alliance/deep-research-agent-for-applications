@@ -124,6 +124,7 @@ make app-help           # Run the ${APP} application with --help to see the supp
 make app-help-<foo>     # Show help for the <foo> application.
 make app-setup          # One-time setup of the application dependences.
 make test               # Run the automated tests. ("make tests" is a synonym...)
+make type-check         # Run the "ty" type checker on the code.
 make build              # Build distributions of the DRA "core" and apps.
 make build-core         # Build a distribution of the DRA "core".
 make build-apps         # Build a distribution of the applications.
@@ -232,6 +233,17 @@ ${apps_run}::
 apps_help := ${APPS:%=app-help-%}
 ${apps_help}::
 	${MAKE} APP=${@:app-help-%=%} app-help
+
+.PHONY: type-check type-check-core type-check-apps
+
+type-check:: type-check-core type-check-apps
+type-check-core::
+	@echo "Running 'ty' on dra-core..."
+	cd ${DRA_CORE_DIR} && uvx ty check
+type-check-apps::
+	@echo "Running 'ty' on dra-apps..."
+	cd ${DRA_APPS_DIR} && uvx ty check
+
 
 .PHONY: test tests test-dra-core
 

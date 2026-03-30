@@ -11,7 +11,7 @@ import re
 import sys
 import time
 from datetime import datetime
-from typing import Callable
+from typing import Any, Awaitable
 
 from rich.console import Console
 from rich.table import Table
@@ -285,10 +285,12 @@ class RichDisplay(Display):
     """
     def __init__(self, title: str):
         super().__init__(title, disallow_system_change=True)
-        self.orchestrator: DeepOrchestrator = None
-        self.monitor: RichDeepOrchestratorMonitor = None
-        self.console: Console = None
-        self.layout: Layout = None
+        
+        # Initalized in _after_set_system()
+        # self.orchestrator: DeepOrchestrator = None
+        # self.monitor: RichDeepOrchestratorMonitor = None
+        # self.console: Console = None
+        # self.layout: Layout = None
 
         # The following will initialize the previous four attributes, if system != None
         super().__init__(title)
@@ -331,13 +333,12 @@ class RichDisplay(Display):
 
         return layout
 
-    async def run_live(self, function: Callable[[], None]):
-        with Live(self.layout, console=self.console, refresh_per_second=4, screen=True, transient=False) as _live:
-            await function()
+    async def run_live(self, function: Awaitable[None]) -> None:
+        await function
 
     def _do_update(self, 
-        other: dict[str,any] = {},
-        is_final: bool = False) -> any:
+        other: dict[str,Any] = {},
+        is_final: bool = False) -> Any:
         """
         Update the display with the current state. 
         If `other['messages']` and/or `other['error_msg']` are not empty/None, then 
@@ -399,11 +400,13 @@ class RichDisplay(Display):
                 f"Finished: See {output_dir_path_msg}log files under ./logs.",
                 "\n",
             ]
-            if other.get('messages'):
-                msg_list1.extend(other.get('messages'))
-            msg_list = [[f"[bold black]{line}[/bold black]" for line in msg_list1]]
-            if other.get('error_msg'):
-                msg_list.extend(['\n', f"[bold red]ERROR: {other.get('error_msg')}[/bold red]"])
+            other_messages = other.get('messages')
+            if other_messages:
+                msg_list1.extend(list(other_messages))
+            msg_list = [f"[bold black]{line}[/bold black]" for line in msg_list1]
+            error_msg = other.get('error_msg')
+            if error_msg:
+                msg_list.extend(['\n', f"[bold red]ERROR: {error_msg}[/bold red]"])
             for line in msg_list:
                 self.console.print(line)
                 self.system.logger.info(line)
@@ -412,8 +415,8 @@ class RichDisplay(Display):
             print(f"Exception {ex} was raised during last output messages. Continuing...")
 
     async def async_update(self,
-        other: dict[str,any] = {},
-        is_final: bool = False) -> any:
+        other: dict[str,Any] = {},
+        is_final: bool = False) -> Any:
         return await self.__update_token_usage()
 
     def __update_final_statistics(self):
