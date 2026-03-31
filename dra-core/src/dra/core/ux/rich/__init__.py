@@ -414,7 +414,7 @@ class RichDisplay(Display):
         except Exception as ex:
             print(f"Exception {ex} was raised during last output messages. Continuing...")
 
-    async def async_update(self,
+    async def _do_async_update(self,
         other: dict[str,Any] = {},
         is_final: bool = False) -> Any:
         return await self.__update_token_usage()

@@ -33,7 +33,9 @@ class TestStringUtils(unittest.TestCase):
         exp2 = re.sub(r'\s+', '_', in2).lower()
         self.assertEqual(exp2, to_id(in2))
 
-    @given(st.dictionaries(no_brace_nonempty_text(), no_brace_text()), st.text(), st.text())
+    @given(
+        st.dictionaries(no_brace_nonempty_text(), no_brace_text()), 
+        st.text(), st.text())
     def test_replace_variables_replaces_keys_with_values(self, 
         kvs: dict[str, str], delimiter, prefix_suffix):
         """
@@ -44,11 +46,36 @@ class TestStringUtils(unittest.TestCase):
         key_strs = ['{{'+key+'}}' for key in kvs.keys()]
         text = f"{prefix_suffix}{delimiter.join(key_strs)}{prefix_suffix}"
         et = f"{prefix_suffix}{delimiter.join(kvs.values())}{prefix_suffix}"
-        at = replace_variables(text, variables=kvs)
+        at = replace_variables(text, kvs)
         expected_text = et.strip()
         actual_text = at.strip()
         self.assertEqual(expected_text, actual_text,
             f'<{expected_text}> != <{actual_text}> (kvs: {kvs}, text = {text}, delimiter = {delimiter}, prefix_suffix = {prefix_suffix})')
+
+    @given(
+        st.dictionaries(no_brace_nonempty_text(), no_brace_text(), min_size=4, max_size=10), 
+        st.text(), st.text())
+    def test_replace_variables_replaces_keys_with_values_including_extra_kvs(self, 
+        kvs: dict[str, str], delimiter, prefix_suffix):
+        """
+        Verify that the keys are are properly replaced with the corresponding values
+        in the text. This version of the test adds optional **kvs beyond the dictionary.
+        We ignore whitespace at the beginnings and the ends of strings.
+        """
+        # Split the dictionary, passing the first part as `variables` and the second part as `extras`.
+        for i in range(len(kvs)):
+            keys = list(kvs.keys())
+            vals = list(kvs.values())
+            kvs1 = dict({(key, kvs[key]) for key in keys[:i]})
+            kvs2 = dict({(key, kvs[key]) for key in keys[i:]})
+            key_strs = ['{{'+key+'}}' for key in keys]
+            text = f"{prefix_suffix}{delimiter.join(key_strs)}{prefix_suffix}"
+            et = f"{prefix_suffix}{delimiter.join(vals)}{prefix_suffix}"
+            at = replace_variables(text, kvs1, **kvs2)
+            expected_text = et.strip()
+            actual_text = at.strip()
+            self.assertEqual(expected_text, actual_text,
+                f'<{expected_text}> != <{actual_text}> (kvs1: {kvs1}, kvs2: {kvs2}, text = {text}, delimiter = {delimiter}, prefix_suffix = {prefix_suffix})')
 
     @given(st.text(max_size=25), st.integers(min_value=0, max_value=20), st.sampled_from(['', '...']))
     def test_truncate(self, s: str, n: int, ellipsis: str):

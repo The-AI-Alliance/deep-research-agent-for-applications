@@ -1,6 +1,7 @@
 # Common string utilities
 
 import re
+from typing import Any
 
 def to_id(s: str) -> str:
     """
@@ -9,11 +10,13 @@ def to_id(s: str) -> str:
     """
     return re.sub(r'\s+', '_', s).lower()
 
-def replace_variables(string: str, **variables: dict[str,any]) -> str:
+def replace_variables(string: str, variables: dict[str,Any], **extras: dict[str,Any]) -> str:
     """
     Replace variables in a string with their values.
     """
     for key, value in variables.items():
+        string = string.replace('{{'+key+'}}', str(value))    
+    for key, value in extras.items():
         string = string.replace('{{'+key+'}}', str(value))    
     return string
 
@@ -49,7 +52,7 @@ class MarkdownUtil():
         self.default_indent = default_indent
         self.default_key_format = default_key_format
 
-    def __item(self, key: str, item: list[any] | dict[str, any] | str | float | int | tuple,
+    def __item(self, key: str, item: list[Any] | dict[str, Any] | str | float | int | tuple,
         bullet: str, indent: str, key_format: str) -> list[str]:
 
         bullet = self.__value(bullet, self.default_bullet)
@@ -77,14 +80,14 @@ class MarkdownUtil():
     def __value(self, s: str, default: str) -> str:
         return s if s else default
 
-    def dict_to_markdown(self, items: dict[str, any], 
+    def dict_to_markdown(self, items: dict[str, Any], 
         bullet: str = None, indent: str = None, key_format: str = None) -> list[str]:
         lines = []
         for key, value in items.items():
             lines.extend(self.__item(key, value, bullet, indent, key_format))
         return lines
 
-    def list_to_markdown(self, items: list[any], 
+    def list_to_markdown(self, items: list[Any], 
         bullet: str = None, indent: str = None, key_format: str = None) -> list[str]:
         """
         The `key_format` value is used for _nested_ dictionaries only. See `MarkdownUtil.__init__`.
@@ -95,7 +98,7 @@ class MarkdownUtil():
         return lines
 
     def to_markdown(self, 
-        item: list[any] | dict[str, any] | str | float | int | tuple,
+        item: list[Any] | dict[str, Any] | str | float | int | tuple,
         bullet: str = None, indent: str = None, key_format: str = None) -> list[str]:
         """
         Return hierarchical Markdown bullets as a list for an input `item`.

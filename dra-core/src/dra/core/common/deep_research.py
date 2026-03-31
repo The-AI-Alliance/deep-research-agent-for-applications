@@ -178,6 +178,7 @@ class DeepResearch():
         self.observers.extend(observers)
         return self.observers
 
+    # TODO: NOT CURRENTLY USED! Should we delete it??
     def __get_value(self, key: str, default: any = None) -> any:
         return Variable.get_value(self.variables.get(key), default=default)
 

@@ -50,9 +50,18 @@ class Observer(Generic[SYSTEM]):
             return None
 
     async def async_update(self,
+        system: SYSTEM | None = None,
         other: dict[str,Any] = {},
         is_final: bool = False) -> Any:
-        """A hack to support cases where updates have to be asynchronous."""
+        """
+        A hack to support cases where updates have to be asynchronous.
+        Otherwise, behaves the same as `update()`. Subclasses should override `_do_async_update()`, not this method.
+        """
+        self.__update_system(system)
+        if self.system and not self.paused:
+            return await self._do_async_update(other, is_final)
+        else:
+            return None
         pass
 
     def _do_update(self, 
@@ -67,6 +76,16 @@ class Observer(Generic[SYSTEM]):
             is_final (bool): Pass `True` for the last call to update the observer before the application exits.
             messages (list[str]): Option messages the observer can use. Most often used on the final call for user notification.
             error_msg (str): Option message about an error the observer can use. Most often used on the final call for user notification.
+        """
+        pass
+
+
+    async def _do_async_update(self, 
+        other: dict[str,Any] = {},
+        is_final: bool = False) -> Any:
+        """
+        Derived classes override this method for customizing async_update logic.
+        Otherwise, it behaves like `_do_update()`.
         """
         pass
 
@@ -166,13 +185,6 @@ class Observers(Observer):
                 raise ValueError(f"At least one input Observer key already exists: {bad_keys} (current keys: {list(self.observers.keys())}, new keys: {list(extras.keys())}")
         self.observers.update(extras)
 
-    async def async_update(self,
-        other: dict[str,Any] = {},
-        is_final: bool = False) -> Any:
-        """A hack to support cases where updates have to be asynchronous."""
-        for observer in self.observers.values():
-            await observer.async_update(is_final=is_final, other=other)
-
     def _do_update(self, 
         other: dict[str,Any] = {},
         is_final: bool = False) -> Any:
@@ -181,6 +193,13 @@ class Observers(Observer):
         for key, observer in self.observers.items():
             d[key] = observer.update(system=self.system, other=other, is_final=is_final)
         return d
+
+    async def _do_async_update(self,
+        other: dict[str,Any] = {},
+        is_final: bool = False) -> Any:
+        """A hack to support cases where updates have to be asynchronous."""
+        for observer in self.observers.values():
+            await observer.async_update(system=self.system, is_final=is_final, other=other)
 
     def pause(self):
         """

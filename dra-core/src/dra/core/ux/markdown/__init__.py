@@ -404,7 +404,7 @@ class MarkdownObserver(Observer[DeepResearch]):
 
         return self.layout
 
-    async def async_update(self,
+    async def _do_async_update(self,
         other: dict[str,Any] = {},
         is_final: bool = False) -> Any:
         if not is_final:
@@ -785,6 +785,6 @@ class MarkdownObserver(Observer[DeepResearch]):
                 template_str = file.read()
             if template_str:
                 yaml_header_str = replace_variables(template_str, 
-                    title=self.title, 
-                    **self.system.variables)
+                    self.system.variables,
+                    title=self.title)
         return f"{yaml_header_str}\n{self.layout}"

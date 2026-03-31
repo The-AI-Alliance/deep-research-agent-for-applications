@@ -202,7 +202,7 @@ class TestVariables(unittest.TestCase):
         self.assertEqual(expected, actual)
         v2 = Variable(key, value, label=label, kind='')
         actual = str(v2)
-        expected = f"Variable(key = {key}, value = {value}, label = {label}, kind = '')"
+        expected = f"Variable(key = {key}, value = {value}, label = {label}, kind = )"
         self.assertEqual(expected, actual)
 
     @given(st.sampled_from(['openai', 'anthropic', 'ollama']))

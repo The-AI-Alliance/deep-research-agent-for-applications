@@ -2,7 +2,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from enum import Enum
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 
 class VariableFormat(Enum):
@@ -12,7 +12,7 @@ class VariableFormat(Enum):
 class Variable():
     def __init__(self,
         key: str, 
-        value: any,
+        value: Any,
         label: str = None, 
         kind: str = 'str'):
         """
@@ -28,11 +28,10 @@ class Variable():
         self.kind = kind
 
     def __repr__(self) -> str:
-        fmt_str = '...' if self.kind else None
-        return f"Variable(key = {self.key}, value = {self.value}, label = {self.label}, kind = {fmt_str})"
+        return f"Variable(key = {self.key}, value = {self.value}, label = {self.label}, kind = {self.kind})"
 
     @staticmethod
-    def get(variable: Variable, default: any) -> any:
+    def get(variable: Variable, default: Any) -> Any:
         """Return the variables value or default if the variable is None or the value is None."""
         if variable and variable.value:
             return variable.value
@@ -91,7 +90,7 @@ class Variable():
         'ollama':    'Ollama',
     }
 
-    def get_value(variable: Variable, default: any = None) -> any | None:
+    def get_value(variable: Variable, default: Any = None) -> Any | None:
         if variable:
             return variable.value if variable.value else default
         else:
