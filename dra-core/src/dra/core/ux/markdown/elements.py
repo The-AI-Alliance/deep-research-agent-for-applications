@@ -177,13 +177,14 @@ class MarkdownTable(MarkdownElement):
     def __init__(self, title: str = '', columns: Sequence[str] = [], columns_with_justifications: Sequence[tuple[str,str]] = []):
         """Only one of `columns` and `columns_with_justifications` can be non-empty!"""
         super().__init__(title)
-        assert not columns or not columns_with_justifications
+        if columns and columns_with_justifications:
+            raise ValueError("Must only specify non-empty 'columns' or 'columns_with_justifications'.")
         self.columns: list[str] = []
         self.columns_justifications: list[str] = []
         self.rows = []
         if columns:
             self.add_columns(columns)
-        if columns:
+        else:
             self.add_columns_with_justifications(columns_with_justifications)
 
     def add_columns(self, columns: Sequence[str]):

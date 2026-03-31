@@ -153,11 +153,12 @@ class TestMarkdownSection(unittest.TestCase):
         self.assert_section_valid(section, title, level, [], {})
         section.add_subsections(subsections_l)
         self.assert_section_valid(section, title, level, [], subsections_d)
-        new_ss_l = [(ss.title+'2', ss) for ss in subsections_l]
-        new_ss_d = dict([(ss.title, ss) for ss in new_ss_l])
-        section.add_subsections(new_ss_l)
+
+        subsections_l2 = [MarkdownSection(t+'2', level+1, ['lorem ipsum2']) for t in subsection_titles]
+        subsections_d2 = dict([(ss.title, ss) for ss in subsections_l2])
+        section.add_subsections(subsections_l2)
         all_ss = subsections_d.copy()
-        all_ss.update(new_ss_d)
+        all_ss.update(subsections_d2)
         self.assert_section_valid(section, title, level, [], all_ss)
 
     @given(st.integers(min_value=1, max_value=4), 
@@ -272,7 +273,7 @@ class TestMarkdownSection(unittest.TestCase):
         section = MarkdownSection(title, level, content, subsections_l)
         self.assert_section_valid(section, title, level, content_l, subsections_d)
         section.clear()
-        self.assert_section_valid(section, title, level, [1], {})
+        self.assert_section_valid(section, title, level, [], {})
 
     @given(st.integers(min_value=1, max_value=4), 
         no_linefeeds_nonempty_text(), 
