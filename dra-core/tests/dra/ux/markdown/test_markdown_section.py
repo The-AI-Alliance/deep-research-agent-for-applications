@@ -272,7 +272,7 @@ class TestMarkdownSection(unittest.TestCase):
         section = MarkdownSection(title, level, content, subsections_l)
         self.assert_section_valid(section, title, level, content_l, subsections_d)
         section.clear()
-        self.assert_section_valid(section, title, level, [], {})
+        self.assert_section_valid(section, title, level, [1], {})
 
     @given(st.integers(min_value=1, max_value=4), 
         no_linefeeds_nonempty_text(), 

@@ -604,7 +604,7 @@ class MarkdownObserver(Observer[DeepResearch]):
 
         return all_content
 
-    def __handle_content(self, content: list[Any]) -> (list[str], bool)
+    def __handle_content(self, content: list[Any]) -> (list[str], bool):
         """
         What we hope is that the content returned by messages is Markdown, 
         e.g., "[```markdown", "...", "```"]. If so, we remove the leading and

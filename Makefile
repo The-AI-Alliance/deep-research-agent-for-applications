@@ -249,7 +249,7 @@ type-check-apps::
 
 test tests test-dra-core::
 	@echo "Running dra-core tests..."
-	cd ${DRA_CORE_DIR} && uv run python -m unittest discover
+	cd ${DRA_CORE_DIR} && uv run python -m unittest discover ${VERBOSE}
 
 app-run:: before-app-run do-app-run-${APP} after-app-run
 before-app-run:: app-check setup-output-dir
