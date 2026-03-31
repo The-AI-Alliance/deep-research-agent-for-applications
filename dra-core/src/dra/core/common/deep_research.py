@@ -9,7 +9,7 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from abc import abstractmethod
-from typing import Callable, Optional
+from typing import Any, Callable, Optional, Sequence
 
 from mcp_agent.agents.agent import Agent
 from mcp_agent.app import MCPApp
@@ -40,7 +40,7 @@ class DeepResearch():
             app_name: str,
             provider: str,
             config: DeepOrchestratorConfig,
-            tasks: list[BaseTask],
+            tasks: Sequence[BaseTask],
             display: Display,
             observers: Observers,
             variables: dict[str, Variable]):
@@ -99,11 +99,11 @@ class DeepResearch():
     async def run(self):
         await self.__finish_init()
 
-        verbose = Variable.get(self.variables.get('verbose'), False)
+        verbose = Variable.get_value(self.variables.get('verbose'), False)
         if verbose:
             self.__print_details()
 
-        update_iteration_frequency_secs = Variable.get(
+        update_iteration_frequency_secs = Variable.get_value(
             self.variables.get(
                 'update_iteration_frequency_secs'), 1.0)
 
@@ -179,8 +179,8 @@ class DeepResearch():
         return self.observers
 
     # TODO: NOT CURRENTLY USED! Should we delete it??
-    def __get_value(self, key: str, default: any = None) -> any:
-        return Variable.get_value(self.variables.get(key), default=default)
+    # def __get_value(self, key: str, default: Any = None) -> Any:
+    #     return Variable.get_value(self.variables.get(key), default=default)
 
     async def run_tasks(self) -> str:
         """
@@ -203,7 +203,7 @@ class DeepResearch():
 
         return ''
         
-    def __save_task_raw_result(self, name: str, result: list[any]):
+    def __save_task_raw_result(self, name: str, result: list[Any]):
         result_file = self.output_dir_path / f"{name}_result.txt"
         self.logger.info(f"Writing 'raw' returned result for task {name} to: {result_file}")
         with open(result_file, "w") as file:
@@ -261,8 +261,8 @@ class DeepResearch():
                 max_time_minutes=1,
             )
         else:
-            def get_val(key: str, default: any) -> any:
-                return Variable.get(variables.get(key), default)
+            def get_val(key: str, default: Any) -> Any:
+                return Variable.get_value(variables.get(key), default)
 
             execution_config=ExecutionConfig(
                 max_iterations=get_val('max_iterations', 25),
@@ -284,7 +284,7 @@ class DeepResearch():
         )
         return config
 
-    def __get_var_value(self, key: str, default: any = None) -> any:
+    def __get_var_value(self, key: str, default: Any = None) -> Any:
         if not self.variables:
             raise ValueError("Logic error: self.variables not yet initialized!")
         variable = self.variables.get(key)

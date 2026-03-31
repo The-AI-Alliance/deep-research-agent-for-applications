@@ -163,8 +163,30 @@ class TestMarkdownSection(unittest.TestCase):
 
     @given(st.integers(min_value=1, max_value=4), 
         no_linefeeds_nonempty_text(), 
+        st.lists(no_linefeeds_nonempty_text(), min_size=1, max_size=5, unique_by = str))
+    def test_section_add_subsections_as_dict_adds_to_the_existing_subsections(self, 
+        level: int, title: str, subsection_titles: list[str]):
+        """
+        Verify that add_subsections correctly appends subsections to a section.
+        """
+        subsections_l = [MarkdownSection(t, level+1, ['lorem ipsum']) for t in subsection_titles]
+        subsections_d = dict([(ss.title, ss) for ss in subsections_l])
+        section = MarkdownSection(title, level, [], [])
+        self.assert_section_valid(section, title, level, [], {})
+        section.add_subsections_as_dict(subsections_d)
+        self.assert_section_valid(section, title, level, [], subsections_d)
+
+        subsections_l2 = [MarkdownSection(t+'2', level+1, ['lorem ipsum2']) for t in subsection_titles]
+        subsections_d2 = dict([(ss.title, ss) for ss in subsections_l2])
+        section.add_subsections_as_dict(subsections_d2)
+        all_ss = subsections_d.copy()
+        all_ss.update(subsections_d2)
+        self.assert_section_valid(section, title, level, [], all_ss)
+
+    @given(st.integers(min_value=1, max_value=4), 
+        no_linefeeds_nonempty_text(), 
         st.lists(no_linefeeds_nonempty_text(), max_size=5, unique_by = str))
-    def test_subsections_must_have_new_unique_titles(self, 
+    def test_add_subsections_requires_subsections_to_have_new_unique_titles(self, 
         level: int, title: str, subsection_titles: list[str]):
         """
         Verify that when adding subsections, they all have new, unique keys not already
@@ -176,6 +198,22 @@ class TestMarkdownSection(unittest.TestCase):
         for ss in subsections_l:
             with self.assertRaises(ValueError):
                 section.add_subsections([ss])
+
+    @given(st.integers(min_value=1, max_value=4), 
+        no_linefeeds_nonempty_text(), 
+        st.lists(no_linefeeds_nonempty_text(), max_size=5, unique_by = str))
+    def test_add_subsections_as_dict_requires_subsections_to_have_new_unique_titles(self, 
+        level: int, title: str, subsection_titles: list[str]):
+        """
+        Verify that when adding subsections, they all have new, unique keys not already
+        in the subsection dictionary.
+        """
+        subsections_l = [MarkdownSection(t, level+1, ['lorem ipsum']) for t in subsection_titles]
+        section = MarkdownSection(title, level, [], subsections_l)
+        # Try re-adding each one.
+        for ss in subsections_l:
+            with self.assertRaises(ValueError):
+                section.add_subsections_as_dict(dict({ss.title: ss}))
 
     @given(st.integers(min_value=1, max_value=4), 
         no_linefeeds_nonempty_text())
@@ -223,7 +261,7 @@ class TestMarkdownSection(unittest.TestCase):
     @given(st.integers(min_value=1, max_value=4), 
         no_linefeeds_nonempty_text(), 
         st.lists(no_linefeeds_nonempty_text(), min_size=1, max_size=5, unique_by = str))
-    def test_section_all_subsections_can_be_replaced(self, 
+    def test_set_subsections_all_subsections_will_be_replaced(self, 
         level: int, title: str, subsection_titles: list[str]):
         """
         Verify that add_subsections correctly appends subsections to a section.
@@ -238,6 +276,28 @@ class TestMarkdownSection(unittest.TestCase):
         for ss in subsections_l2:
             self.assertEqual(ss, section[ss.title], f"key = {ss.title}")
         section.set_subsections(subsections_l2)
+        self.assertEqual(len(subsections_d2), len(section.subsections))
+        for key,ss in subsections_d2.items():
+            self.assertEqual(ss, section[key], f"key = {key}")
+
+    @given(st.integers(min_value=1, max_value=4), 
+        no_linefeeds_nonempty_text(), 
+        st.lists(no_linefeeds_nonempty_text(), min_size=1, max_size=5, unique_by = str))
+    def test_set_subsections_as_dict_all_subsections_will_be_replaced(self, 
+        level: int, title: str, subsection_titles: list[str]):
+        """
+        Verify that add_subsections correctly appends subsections to a section.
+        """
+        subsections_l = [MarkdownSection(t, level+1, ['lorem ipsum']) for t in subsection_titles]
+        subsections_l2 = [MarkdownSection(t+'2', level+1, ['lorem ipsum']) for t in subsection_titles]
+        subsections_d = dict([(ss.title, ss) for ss in subsections_l])
+        subsections_d2 = dict([(ss.title, ss) for ss in subsections_l2])
+        section = MarkdownSection(title, level, [], subsections_l)
+        section.set_subsections_as_dict(subsections_d2)
+        self.assertEqual(len(subsections_l2), len(section.subsections))
+        for ss in subsections_l2:
+            self.assertEqual(ss, section[ss.title], f"key = {ss.title}")
+        section.set_subsections_as_dict(subsections_d2)
         self.assertEqual(len(subsections_d2), len(section.subsections))
         for key,ss in subsections_d2.items():
             self.assertEqual(ss, section[key], f"key = {key}")

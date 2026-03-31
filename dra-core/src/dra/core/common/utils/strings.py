@@ -10,7 +10,7 @@ def to_id(s: str) -> str:
     """
     return re.sub(r'\s+', '_', s).lower()
 
-def replace_variables(string: str, variables: dict[str,Any], **extras: dict[str,Any]) -> str:
+def replace_variables(string: str, variables: dict[str,Any], **extras: Any) -> str:
     """
     Replace variables in a string with their values.
     """

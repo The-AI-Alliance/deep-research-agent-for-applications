@@ -1,4 +1,4 @@
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, Generic, Mapping, Optional, TypeVar
 from dra.core.common.variables import Variable
 
 SYSTEM = TypeVar("SYSTEM")
@@ -157,7 +157,7 @@ class Observers(Observer):
     observers from the same system.
     """
 
-    def __init__(self, observers: dict[str, Observer] = {}):
+    def __init__(self, observers: Mapping[str, Observer] = {}):
         super().__init__()
         """
         Create a collection of observers to manage as one. 
@@ -170,7 +170,7 @@ class Observers(Observer):
             raise ValueError("Observers() called with an empty list of observers!")
         self.observers = observers
 
-    def add_observers(self, extras: dict[str, Observer]):
+    def add_observers(self, extras: Mapping[str, Observer]):
         """
         Add more Observers. For safety, we raise an exception if a new key already exists!
         Nothing changes if `extras` is empty or None.

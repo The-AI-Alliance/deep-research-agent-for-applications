@@ -157,7 +157,7 @@ class BaseTask():
                 logger.info(msg)
 
     def _get_val(self, key: str, default: Any) -> Any:
-        return Variable.get(self.properties.get(key), default)
+        return Variable.get_value(self.properties.get(key), default)
 
 class GenerateTask(BaseTask):
     def __init__(self, 

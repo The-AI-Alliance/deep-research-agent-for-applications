@@ -148,15 +148,26 @@ class TestVariables(unittest.TestCase):
         self.assertEqual(expected, Variable.make_label(string))
 
     @given(no_brace_nonempty_text())
-    def test_Variable_get_returns_default_if_variable_or_value_None(self, string: str):
+    def test_Variable_get_value_returns_default_if_variable_or_value_None(self, string: str):
         v = Variable('key', None)
-        self.assertEqual(str, Variable.get(v, str))
-        self.assertEqual(str, Variable.get(None, str)) # ty: ignore[invalid-argument-type]
+        self.assertEqual(str, Variable.get_value(v, str))
+        self.assertEqual(str, Variable.get_value(None, str))
 
     @given(no_brace_nonempty_text())
-    def test_Variable_get_returns_value_if_variable_and_value_not_None(self, string: str):
+    def test_Variable_get_value_returns_value_if_variable_and_value_not_None(self, string: str):
         v = Variable('key', str)
-        self.assertEqual(str, Variable.get(v, None))
+        self.assertEqual(str, Variable.get_value(v, None))
+
+    def test_Variable_get_value_returns_default_if_variable_arg_None_or_value_None(self):
+        s = 'key'
+        # default is None:
+        self.assertEqual(None, Variable.get_value(None))
+        self.assertEqual(None, Variable.get_value(Variable(s, None)))
+        self.assertEqual("Not None", Variable.get_value(Variable(s, "Not None")))
+        # default is something else...
+        self.assertEqual("hello", Variable.get_value(None, default="hello"))
+        self.assertEqual("hello", Variable.get_value(Variable(s, None), default="hello"))
+        self.assertEqual("Not None", Variable.get_value(Variable(s, "Not None"), default="hello"))
 
     @given(no_brace_text())
     def test_Variable_format_returns_None_if_kind_empty(self, string: str):
@@ -181,17 +192,6 @@ class TestVariables(unittest.TestCase):
         for s in ['str', 'url', 'file', 'dict', 'callout']:
             variable = Variable(s, None, kind=s)
             self.assertEqual((s, Variable.make_label(s), 'None'), variable.format())
-
-    def test_Variable_get_value_returns_default_if_variable_arg_None_or_value_None(self):
-        s = 'key'
-        # default is None:
-        self.assertEqual(None, Variable.get_value(None)) # ty: ignore[invalid-argument-type]
-        self.assertEqual(None, Variable.get_value(Variable(s, None)))
-        self.assertEqual("Not None", Variable.get_value(Variable(s, "Not None")))
-        # default is something else...
-        self.assertEqual("hello", Variable.get_value(None, default="hello")) # ty: ignore[invalid-argument-type]
-        self.assertEqual("hello", Variable.get_value(Variable(s, None), default="hello"))
-        self.assertEqual("Not None", Variable.get_value(Variable(s, "Not None"), default="hello"))
 
     @given(no_brace_nonempty_text(max_size=16), no_brace_nonempty_text(max_size=16))
     def test_Variable___repr__(self, label: str, value: str):

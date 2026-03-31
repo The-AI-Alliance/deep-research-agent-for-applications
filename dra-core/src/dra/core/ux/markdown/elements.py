@@ -86,7 +86,7 @@ class MarkdownSection(MarkdownElement):
             else:
                 self.content.append(MarkdownElement(title=str(item)))
 
-    def set_subsections(self, subsections: list[MarkdownSection]):
+    def set_subsections(self, subsections: Sequence[MarkdownSection]):
         """
         Replace the subsections.
         NOTE: All the levels will be reset to to the parent's level + 1, unless they
@@ -95,7 +95,16 @@ class MarkdownSection(MarkdownElement):
         self.subsections = {}
         self.add_subsections(subsections)
         
-    def add_subsections(self, subsections: list[MarkdownSection]):
+    def set_subsections_as_dict(self, subsections: Mapping[str,MarkdownSection]):
+        """
+        Replace the subsections.
+        NOTE: All the levels will be reset to to the parent's level + 1, unless they
+        are already >= level+1!
+        """
+        self.subsections = {}
+        self.add_subsections_as_dict(subsections)
+        
+    def add_subsections(self, subsections: Sequence[MarkdownSection]):
         """
         Add subsections. They will be stored in a dictionary ordered by insertion order
         (a Python dict implementation feature...), which we need to support rendering in
@@ -107,23 +116,34 @@ class MarkdownSection(MarkdownElement):
         NOTE: All the levels will be reset as needed to be >= the parent's level + 1.
         """
         ss = dict([(s.title, s) for s in subsections])
+        self.add_subsections_as_dict(ss)
 
+    def add_subsections_as_dict(self, subsections: Mapping[str,MarkdownSection]):
+        """
+        Add subsections, specified as a dictionary. They will be stored in a dictionary
+        ordered by insertion order (a Python dict implementation feature...), which we 
+        need to support rendering in the correct order. So, insert the subsections in the
+        correct order for displaying. Storing in a dict allows subsequent updating of a 
+        subsection by referring to it by its key. However, this method raises a `ValueError` 
+        if any keys in the new subsections already exist in the current subsections.
+        NOTE: All the levels will be reset as needed to be >= the parent's level + 1.
+        """
         bad_elements = []
         bad_keys = []
-        for key, s in ss.items():
+        for key, ss in subsections.items():
             if key in self.subsections:
                 bad_keys.append(key) 
-            if not isinstance(s, MarkdownSection):
-                bad_elements.append(str(s))
+            if not isinstance(ss, MarkdownSection):
+                bad_elements.append(str(ss))
         error = 'add_subsections(): '
         if len(bad_keys) > 0:
-            error += f"All new subsections must have a unique key. bad keys = {bad_keys}. Existing keys = <{self.subsections.keys()}>, new keys = <{ss.keys()}>"
+            error += f"All new subsections must have a unique key. bad keys = {bad_keys}. Existing keys = <{self.subsections.keys()}>, new keys = <{subsections.keys()}>"
         if len(bad_elements) > 0:
             error += f"Only MarkdownSections may be added as subsections. Bad elements = <{bad_elements}>."
         if len(bad_keys) > 0 or len(bad_elements) > 0:
             raise ValueError(error)
 
-        self.subsections.update(ss)
+        self.subsections.update(subsections)
         self._fix_levels()
 
     def clear(self):
@@ -348,7 +368,7 @@ class MarkdownTree(MarkdownElement):
         return [self.add(child) for child in children]
 
     def __tri(self, first: Optional[str], second: Optional[str], third: str, 
-        check: Optional[Callable[[str]],str] = lambda s: str(s)) -> str:
+        check: Callable[[str],str] = lambda s: str(s)) -> str:
         if first:
             return check(first)
         elif second:

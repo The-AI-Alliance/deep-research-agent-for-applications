@@ -2,8 +2,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable
-
+from typing import Any, Callable, Generic, Optional, TypeVar
 
 class VariableFormat(Enum):
     MARKDOWN = 0
@@ -30,9 +29,10 @@ class Variable():
     def __repr__(self) -> str:
         return f"Variable(key = {self.key}, value = {self.value}, label = {self.label}, kind = {self.kind})"
 
-    @staticmethod
-    def get(variable: Variable, default: Any) -> Any:
-        """Return the variables value or default if the variable is None or the value is None."""
+    V = TypeVar("V")
+
+    @classmethod
+    def get_value(cls, variable: Optional[Variable], default: Optional[V] = None) -> Optional[V]:
         if variable and variable.value:
             return variable.value
         else:
@@ -89,12 +89,6 @@ class Variable():
         'anthropic': 'Anthropic',
         'ollama':    'Ollama',
     }
-
-    def get_value(variable: Variable, default: Any = None) -> Any | None:
-        if variable:
-            return variable.value if variable.value else default
-        else:
-            return default
     
     markdown_formats: dict[str, Callable[[Variable],str]] = {
         'str':            lambda v: str(v.value),

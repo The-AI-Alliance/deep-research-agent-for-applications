@@ -11,7 +11,7 @@ import time
 from datetime import datetime, timedelta
 from json.decoder import JSONDecodeError
 from pathlib import Path
-from typing import cast, Any, Generic, Optional
+from typing import cast, no_type_check, Any, Generic, Mapping, Optional, Sequence
 
 from mcp_agent.workflows.deep_orchestrator.orchestrator import DeepOrchestrator
 from openai.types.chat import ChatCompletionMessage
@@ -340,17 +340,17 @@ class MarkdownObserver(Observer[DeepResearch]):
         super().__init__(disallow_system_change=True)
         self.title = title
         self.yaml_header_template = yaml_header_template
+
         # Lazy initialize these in `_after_set_system()`.
-        # self.monitor: MarkdownDeepOrchestratorMonitor = None
-        # self.orchestrator: DeepOrchestrator = None
+        # self.monitor: MarkdownDeepOrchestratorMonitor
+        # self.research_report_path: Path
 
     def _after_set_system(self):
         """
         Once the system is set, we finish initializing this object.
         """ 
-        self.system.logger.info("MarkdownObserver._after_set_system() (self.system not None)")
-        self.orchestrator = self.system.orchestrator
-        self.monitor = MarkdownDeepOrchestratorMonitor(self.orchestrator)
+        self.system.logger.info("MarkdownObserver._after_set_system() (self.system not None)")  # type: ignore
+        self.monitor = MarkdownDeepOrchestratorMonitor(self.system.orchestrator)
 
         output_dir_path = self.__get_var_value('output_dir_path', Path('./output'))
         self.research_report_path = self.__get_var_value('research_report_path',
@@ -367,7 +367,7 @@ class MarkdownObserver(Observer[DeepResearch]):
         Update the display with the current state. Because the final Markdown report 
         is all we care about, we don't do anything unless `is_final == True`! 
         """
-        # self.system.logger.info(f"MarkdownObserver._do_update(is_final={is_final})")
+        # self.system.logger.info(f"MarkdownObserver._do_update(is_final={is_final})")  # type: ignore
         
         if not is_final:
             return self.layout
@@ -430,12 +430,12 @@ class MarkdownObserver(Observer[DeepResearch]):
         except (JSONDecodeError, TypeError) as err:
             err_msg = f"{err} raised while parsing attempting to parse {context} results."
             if log_failure:
-                self.system.logger.warning(f"{err_msg}: input = {s}")
+                self.system.logger.warning(f"{err_msg}: input = {s}")  # type: ignore
             return (err_msg, None)
         except Exception as err:
             err_msg = f"{err} of type {type(err)} raised while parsing attempting to parse {context} results."
             if log_failure:
-                self.system.logger.warning(f"{err_msg}: input = {s}")
+                self.system.logger.warning(f"{err_msg}: input = {s}")  # type: ignore
             return (err_msg, None)
 
     def __make_layout(self, title: str) -> MarkdownSection:
@@ -479,11 +479,20 @@ class MarkdownObserver(Observer[DeepResearch]):
         return layout 
 
     def add_section(self, title: str, 
-        content: list[MarkdownElement | str] = [], 
-        subsections: dict[str, MarkdownElement] = {}) -> MarkdownSection:
+        content: Sequence[MarkdownElement | str] = [], 
+        subsections: Sequence[MarkdownSection] = []) -> MarkdownSection:
         section = MarkdownSection(title=title, content=content, subsections=subsections)
         self.layout.add_subsections([section])
         return section
+
+    def __message_to_rows(self, table: MarkdownTable, fields: dict[str,Any]):
+        for key, value in fields.items():
+            v = str(value)
+            if key == 'content':
+                v2 = v if len(v) <= 100 else f"{v[:50]} ... {v[-50:]}"
+                lines = v2.split("\n")
+                lines2, is_markdown = self.__handle_content(lines)
+            table.add_row([key, f"`{'\n'.join(lines2)}`"])
 
     def __parse_openai_message(self, message_index: int, obj: Any) -> list[Any]:
         # For inference with OpenAI, the results will be a ChatCompletionMessage:
@@ -491,19 +500,13 @@ class MarkdownObserver(Observer[DeepResearch]):
         def make_metadata_table_from_dict(
             ccm: ChatCompletionMessage) -> MarkdownTable:
             table = MarkdownTable(title=f"✉️ OpenAI/Ollama Reply Message #{message_index}: Metadata",
-                columns = [('Item', 'left'), ('Value', 'left')])
-            for key, value in ccm.to_dict().items():
-                v = str(value)
-                if key == content:
-                    v2 = v if len(v) <= 100 else f"{v[:50]} ... {v[-50:]}"
-                    lines = v2.split("\n")
-                    lines2, is_markdown = self.__handle_content(lines)
-                table.add_row([key, f"`{'\n'.join(lines2)}`"])
+                columns = ['Item', 'Value'])
+            self.__message_to_rows(table, ccm.to_dict())
             return table
 
         sobj = str(obj)
         content: list[Any] = []
-        metadata_table: MarkdownTable = None
+        metadata_table: Optional[MarkdownTable] = None
 
         if isinstance(obj, ChatCompletionMessage):
             ccm: ChatCompletionMessage = cast(ChatCompletionMessage, obj)
@@ -536,52 +539,15 @@ class MarkdownObserver(Observer[DeepResearch]):
         return all_content
 
     def __parse_anthropic_message(self, message_index: int, obj: Any) -> list[Any]:
-        def make_metadata_table(
-            subtype: str,
-            duration_ms: int,
-            duration_api_ms: int,
-            is_error: bool,
-            num_turns: int,
-            session_id: str,
-            total_cost_usd: Optional[float] = None,
-            usage: dict[str, Optional[Any]] = None, 
-            result: Any = None,
-            structured_output: Any = None) -> MarkdownTable:
-            table = MarkdownTable(title=f"✉️ Anthropic Reply Message #{message_index}: Metadata",
-                columns = [('Item', 'left'), ('Value', 'right')])
-            table.add_row(['subtype', subtype])
-            table.add_row(['duration_ms', str(duration_ms)])
-            table.add_row(['duration_api_ms', str(duration_api_ms)])
-            table.add_row(['is_error', str(is_error)])
-            table.add_row(['num_turns', str(num_turns)])
-            table.add_row(['session_id', session_id])
-            table.add_row(['total_cost_usd', str(total_cost_usd)])
-            table.add_row(['usage', str(usage)])
-            table.add_row(['total_cost_usd', str(total_cost_usd)])
-            table.add_row(['result', str(result)[0:100] + ' ...'])
-            table.add_row(['structured_output', str(structured_output)[0:100] + ' ...'])
-            return table
-
         sobj = str(obj)
         content: list[Any] = []
-        metadata_table: MarkdownTable = None
+        metadata_table: Optional[MarkdownTable] = None
 
         if isinstance(obj, Message):
             rm: Message = cast(Message, obj)
-            content, is_markdown = self.__handle_content(str(rm.result).split('\n'))
-            if not is_markdown:
-                content = [f"> {line}" for line in content]
-            metadata_table = make_metadata_table(
-                subtype = rm.subtype,
-                duration_ms = rm.duration_ms,
-                duration_api_ms = rm.duration_api_ms,
-                is_error = rm.is_error,
-                num_turns = rm.num_turns,
-                session_id = rm.session_id,
-                total_cost_usd = rm.total_cost_usd,
-                usage = rm.usage,
-                result = rm.result,
-                structured_output = rm.structured_output)
+            metadata_table = MarkdownTable(title=f"✉️ Anthropic Reply Message #{message_index}: Metadata",
+                columns_with_justifications = [('Item', 'left'), ('Value', 'right')])
+            self.__message_to_rows(metadata_table, rm.to_dict())
         elif sobj.startswith("Message") or sobj.startswith("ResultMessage"):
             # Try parsing it with the following _ugly_ hack to extract just the
             # `content` from the string:
@@ -591,7 +557,7 @@ class MarkdownObserver(Observer[DeepResearch]):
                 s4 = re.sub('structured_output=', '\nstructured_output:\n', s3)
                 content = s4.split('\n')
             except:  # bail out...
-                content = results.split('\n')
+                content = str(sobj).split('\n')
 
         all_content: list[Any] = []
         if content:
@@ -604,7 +570,7 @@ class MarkdownObserver(Observer[DeepResearch]):
 
         return all_content
 
-    def __handle_content(self, content: list[Any]) -> (list[str], bool):
+    def __handle_content(self, content: list[Any]) -> tuple[list[str], bool]:
         """
         What we hope is that the content returned by messages is Markdown, 
         e.g., "[```markdown", "...", "```"]. If so, we remove the leading and
@@ -621,7 +587,7 @@ class MarkdownObserver(Observer[DeepResearch]):
                 elif not re.match(r'^\s*```\s*$', '', line):
                     result.append(line)
         except:
-            self.system.logger.error("Parsing out markdown failed! {content}")
+            self.system.logger.error("Parsing out markdown failed! {content}")  # type: ignore
             result = content
             is_md = False
         return result, is_md
@@ -661,6 +627,8 @@ class MarkdownObserver(Observer[DeepResearch]):
         result_section.add_subsections(subsections)
         return result_section
 
+    # TODO: Figure out how to fix the warnings on self.system.orchestrator
+    @no_type_check
     def __report_results(self, messages: list[str] = [], error_msg: str = None):
         output_dir_path_msg = ''
         odp = self.__get_var_value('output_dir_path', None)
@@ -692,6 +660,8 @@ class MarkdownObserver(Observer[DeepResearch]):
 
         results_section.add_subsections(results_subsections)
 
+    # TODO: Figure out how to fix the warnings on self.system.orchestrator
+    @no_type_check
     def __update_final_statistics(self) -> MarkdownSection:
         """Update the final statistics for display"""
 
@@ -700,45 +670,49 @@ class MarkdownObserver(Observer[DeepResearch]):
             columns = [("Metric", "left"), ("Value", "right")])
         
         summary_table.add_row(["Total Time", f"{self.monitor.update_execution_time()}"])
-        summary_table.add_row(["Iterations", str(self.orchestrator.iteration)])
-        summary_table.add_row(["Replans", str(self.orchestrator.replan_count)])
+        summary_table.add_row(["Iterations", str(self.system.orchestrator.iteration)])
+        summary_table.add_row(["Replans", str(self.system.orchestrator.replan_count)])
         summary_table.add_row(
-            ["Tasks Completed", str(len(self.orchestrator.queue.completed_task_names))]
+            ["Tasks Completed", str(len(self.system.orchestrator.queue.completed_task_names))]
         )
         summary_table.add_row(
-            ["Tasks Failed", str(len(self.orchestrator.queue.failed_task_names))]
+            ["Tasks Failed", str(len(self.system.orchestrator.queue.failed_task_names))]
         )
         summary_table.add_row(
-            ["Knowledge Items", str(len(self.orchestrator.memory.knowledge))]
+            ["Knowledge Items", str(len(self.system.orchestrator.memory.knowledge))]
         )
         summary_table.add_row(
-            ["Artifacts Created", str(len(self.orchestrator.memory.artifacts))]
+            ["Artifacts Created", str(len(self.system.orchestrator.memory.artifacts))]
         )
         summary_table.add_row(
-            ["Agents Cached", str(len(self.orchestrator.agent_cache.cache))]
+            ["Agents Cached", str(len(self.system.orchestrator.agent_cache.cache))]
         )
         summary_table.add_row(
             ["Cache Hit Rate",
-            f"{self.orchestrator.agent_cache.hits / max(1, self.orchestrator.agent_cache.hits + self.orchestrator.agent_cache.misses):.1%}"]
+            f"{self.system.orchestrator.agent_cache.hits / max(1, self.system.orchestrator.agent_cache.hits + self.system.orchestrator.agent_cache.misses):.1%}"]
         )
         return self.add_section("📊 Final Statistics", [summary_table])
 
+    # TODO: Figure out how to fix the warnings on self.system.orchestrator
+    @no_type_check
     def __update_budget_summary(self) -> MarkdownSection:
         """Update the budget summary (where applicable)."""
-        budget_summary = self.orchestrator.budget.get_status_summary()
+        budget_summary = self.system.orchestrator.budget.get_status_summary()
         return self.add_section("💶 Budget Summary", [budget_summary])
 
+    # TODO: Figure out how to fix the warnings on self.system.orchestrator
+    @no_type_check
     def __update_knowledge_summary(self) -> MarkdownSection:
         """Update knowledge learned."""
         knowledge_table = 'None available...'
-        if self.orchestrator.memory.knowledge:
+        if self.system.orchestrator.memory.knowledge:
             knowledge_table = MarkdownTable(title='', columns = [
                 "Category",
                 "Key",
                 "Value",
                 "Confidence",
             ])
-            for item in self.orchestrator.memory.knowledge[:10]:  # Show first 10
+            for item in self.system.orchestrator.memory.knowledge[:10]:  # Show first 10
                 key = item.key[:30] + "..." if len(item.key) > 30 else item.key
                 valstr = str(item.value)
                 value = valstr[:50] + "..." if len(valstr) > 50 else valstr
@@ -748,7 +722,7 @@ class MarkdownObserver(Observer[DeepResearch]):
                     value,
                     f"{item.confidence:.2f}",
                 ])
-            if len(self.orchestrator.memory.knowledge) > 10:
+            if len(self.system.orchestrator.memory.knowledge) > 10:
                 knowledge_table.add_row(['...', '...', '...', '...'])
 
 
@@ -765,12 +739,14 @@ class MarkdownObserver(Observer[DeepResearch]):
                     summary_info.append(f"* Total Cost: ${summary.cost:.4f}")
         return self.add_section("🪙 Total Tokens", summary_info)
 
+    # TODO: Figure out how to fix the warnings on self.system.orchestrator
+    @no_type_check
     def __update_workspace_artifacts(self) -> MarkdownSection:
         """Update workspace artifacts if any were created."""
         artifacts_info = ["Workspace artifacts usage not available"]
-        if self.orchestrator.memory.artifacts:
+        if self.system.orchestrator.memory.artifacts:
             artifacts_info = []
-            keys = list(self.orchestrator.memory.artifacts.keys())
+            keys = list(self.system.orchestrator.memory.artifacts.keys())
             for name in keys[:5]:
                 artifacts_info.append(f"* {name}")
             if len(keys) > 5:
