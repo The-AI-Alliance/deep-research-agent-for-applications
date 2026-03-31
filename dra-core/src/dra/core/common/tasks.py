@@ -1,9 +1,10 @@
 # Allow types to self-reference during their definitions.
 from __future__ import annotations
 
+from abc import abstractmethod
 from enum import Enum
 from pathlib import Path
-from abc import abstractmethod
+from typing import Any
 
 from mcp_agent.agents.agent import Agent
 from mcp_agent.logging.logger import Logger
@@ -41,14 +42,14 @@ class BaseTask():
         self.properties = properties
 
         self.status: TaskStatus = TaskStatus.NOT_STARTED 
-        self.result: list[any] = []
+        self.result: list[Any] = []
         self.prompt = '' # lazy loaded...
         self.prompt_saved_file = self.output_dir_path / f"{self.name}_task_prompt.txt"
 
     async def run(self, 
         orchestrator: DeepOrchestrator,
         logger: Logger,
-        **prompt_variables: dict[str,any]) -> (TaskStatus, list[any]):
+        **prompt_variables: Any) -> (TaskStatus, list[Any]):
         """
         Return the final status and the result, which are also attributes of the task object.
         """
@@ -70,7 +71,7 @@ class BaseTask():
     @abstractmethod
     async def _run(self, 
         orchestrator: DeepOrchestrator, 
-        logger: Logger) -> list[any]:
+        logger: Logger) -> list[Any]:
         raise Exception("Abstract method BaseTask._run() called!")
 
     def attributes_as_strs(self, 
@@ -155,7 +156,7 @@ class BaseTask():
             case _:
                 logger.info(msg)
 
-    def _get_val(self, key: str, default: any) -> any:
+    def _get_val(self, key: str, default: Any) -> Any:
         return Variable.get(self.properties.get(key), default)
 
 class GenerateTask(BaseTask):
@@ -165,14 +166,14 @@ class GenerateTask(BaseTask):
         model_name: str, 
         prompt_template_path: Path,
         output_dir_path: Path,
-        properties: dict[str,any]):
+        properties: dict[str,Any]):
         super().__init__(name, title, model_name, 
             prompt_template_path, output_dir_path, 
             properties)
 
     async def _run(self, 
         orchestrator: DeepOrchestrator, 
-        logger: Logger) -> list[any]:
+        logger: Logger) -> list[Any]:
         logger.debug("GenerateTask: calling inference")
         return await orchestrator.generate(
             message=self.prompt,
@@ -197,7 +198,7 @@ class AgentTask(BaseTask):
         prompt_template_path: Path,
         output_dir_path: Path,
         generate_prompt: str,
-        properties: dict[str,any]):
+        properties: dict[str,Any]):
         super().__init__(name, title, model_name, 
             prompt_template_path, output_dir_path, 
             properties)
@@ -205,7 +206,7 @@ class AgentTask(BaseTask):
 
     async def _run(self, 
         orchestrator: DeepOrchestrator, 
-        logger: Logger) -> list[any]:
+        logger: Logger) -> list[Any]:
         agent = Agent(
             name=self.name,
             instruction=self.prompt,

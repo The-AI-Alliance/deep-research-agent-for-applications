@@ -1,4 +1,4 @@
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 from dra.core.common.variables import Variable
 
 SYSTEM = TypeVar("SYSTEM")
@@ -24,7 +24,7 @@ class Observer(Generic[SYSTEM]):
         self.resume()
 
     def update(self, 
-        system: SYSTEM | None = None,
+        system: Optional[SYSTEM] = None,
         other: dict[str,Any] = {},
         is_final: bool = False) -> Any:
         """
@@ -50,7 +50,7 @@ class Observer(Generic[SYSTEM]):
             return None
 
     async def async_update(self,
-        system: SYSTEM | None = None,
+        system: Optional[SYSTEM] = None,
         other: dict[str,Any] = {},
         is_final: bool = False) -> Any:
         """

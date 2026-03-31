@@ -11,7 +11,7 @@ import time
 from datetime import datetime, timedelta
 from json.decoder import JSONDecodeError
 from pathlib import Path
-from typing import cast, Any, Generic
+from typing import cast, Any, Generic, Optional
 
 from mcp_agent.workflows.deep_orchestrator.orchestrator import DeepOrchestrator
 from openai.types.chat import ChatCompletionMessage
@@ -543,8 +543,8 @@ class MarkdownObserver(Observer[DeepResearch]):
             is_error: bool,
             num_turns: int,
             session_id: str,
-            total_cost_usd: float | None = None,
-            usage: dict[str, Any] | None = None, 
+            total_cost_usd: Optional[float] = None,
+            usage: dict[str, Optional[Any]] = None, 
             result: Any = None,
             structured_output: Any = None) -> MarkdownTable:
             table = MarkdownTable(title=f"✉️ Anthropic Reply Message #{message_index}: Metadata",

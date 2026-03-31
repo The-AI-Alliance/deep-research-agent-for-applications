@@ -1,7 +1,7 @@
 # Unit tests for the "observer" module.
 
 import unittest
-from typing import Any
+from typing import Any, Optional
 from dra.core.common.observer import Observer, Observers 
 
 class TestObserver(unittest.TestCase):
@@ -52,7 +52,7 @@ class TestObserver(unittest.TestCase):
         obs: CounterObserver,
         counter: Counter,
         disallow_system_change: bool=False,
-        ignore_range: range | None = None):
+        ignore_range: Optional[range] = None):
         expected_counts = [0]
         expected_others = {0: {}}
         for i in range(4):

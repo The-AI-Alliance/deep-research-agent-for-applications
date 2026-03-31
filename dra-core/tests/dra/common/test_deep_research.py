@@ -4,7 +4,7 @@
 import os, re, shutil, sys, unittest
 from hypothesis import given, strategies as st
 from pathlib import Path
-from typing import Any, Awaitable
+from typing import Any, Awaitable, Optional
 
 from dra.core.common.deep_research import DeepResearch
 from dra.core.common.observer import Observer, Observers
@@ -100,10 +100,10 @@ class TestDeepResearch(unittest.TestCase):
     def make(self,
         app_name: str = 'DeepResearchTest',
         provider: str = 'ollama',
-        config: DeepOrchestratorConfig | None = None,
+        config: Optional[DeepOrchestratorConfig] = None,
         tasks: list[BaseTask] = [],
-        display: Display | None = TestDisplay(),
-        observers: Observers | None = None,
+        display: Optional[Display] = TestDisplay(),
+        observers: Optional[Observers] = None,
         variables: dict[str, Variable] = {}):
         if not config:
             config = TestDeepResearch.make_test_config()

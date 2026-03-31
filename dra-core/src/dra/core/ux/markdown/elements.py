@@ -12,7 +12,7 @@ import time
 from collections.abc import Mapping, Sequence
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 from mcp_agent.workflows.deep_orchestrator.orchestrator import DeepOrchestrator
 from mcp_agent.workflows.deep_orchestrator.config import DeepOrchestratorConfig
@@ -262,7 +262,7 @@ class MarkdownTable(MarkdownElement):
             rows_strs = [ self.__make_row(row) for row in self.rows ]
             return f"{title_str}{columns_str}\n{columns_justifications_str}\n{'\n'.join(rows_strs)}\n"
 
-    def __which_type(self, values: Sequence[str] | Sequence[tuple[str,Any]] | Mapping[str,Any]) -> str | None:
+    def __which_type(self, values: Sequence[str] | Sequence[tuple[str,Any]] | Mapping[str,Any]) -> Optional[str]:
         """Return a string with the type for `values`. If empty, then `Sequence[str]` is returned."""
         def type_error():
             tcol  = f"type(values) = <{type(values)}>"
@@ -305,8 +305,8 @@ class MarkdownTree(MarkdownElement):
 
     def __init__(self, 
         label: str | int | float, 
-        bullet: str | None = None, 
-        indentation: str | None = None):
+        bullet: Optional[str] = None, 
+        indentation: Optional[str] = None):
         super().__init__(str(label))
         self.children: list[MarkdownTree] = []
         self.label = label
@@ -347,8 +347,8 @@ class MarkdownTree(MarkdownElement):
         """
         return [self.add(child) for child in children]
 
-    def __tri(self, first: str | None, second: str | None, third: str, 
-        check: Callable[[str | None],str] = lambda s: str(s)) -> str:
+    def __tri(self, first: Optional[str], second: Optional[str], third: str, 
+        check: Optional[Callable[[str]],str] = lambda s: str(s)) -> str:
         if first:
             return check(first)
         elif second:
@@ -372,7 +372,7 @@ class MarkdownTree(MarkdownElement):
     number_re = re.compile(r'^\d+$')
     letter_re = re.compile(r'^\W$')
 
-    def get_bullet(self, default: str | None = None) -> str:
+    def get_bullet(self, default: Optional[str] = None) -> str:
         """
         Return the defined bullet, or return `default`, if defined,
         or else return `MarkdownTree.default_bullet`.
@@ -380,20 +380,20 @@ class MarkdownTree(MarkdownElement):
         return self.__tri(self.bullet, default, MarkdownTree.default_bullet,
             MarkdownTree.enforce_valid_bullet)
 
-    def get_indentation(self, default: str | None = None) -> str:
+    def get_indentation(self, default: Optional[str] = None) -> str:
         """
         Return the defined indentation, or return `default`, if defined,
         or else return `MarkdownTree.default_indentation`.
         """
         return self.__tri(self.indentation, default, MarkdownTree.default_indentation)
 
-    def enforce_valid_bullet(bullet: str | None) -> str:
+    def enforce_valid_bullet(bullet: Optional[str]) -> str:
         if MarkdownTree.validate_bullet(bullet):
             return str(bullet)  # Wrap in str() to make ty typechecker happy.
         else:
             raise ValueError(f"Disallowed bullet value {bullet}. Must be '*', '-', a number, or a letter.")
 
-    def validate_bullet(bullet: str | None) -> bool:
+    def validate_bullet(bullet: Optional[str]) -> bool:
         if not bullet:
             return False
         elif bullet == '*' or bullet == '-' \

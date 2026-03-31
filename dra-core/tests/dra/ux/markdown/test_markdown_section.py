@@ -149,7 +149,7 @@ class TestMarkdownSection(unittest.TestCase):
         """
         subsections_l = [MarkdownSection(t, level+1, ['lorem ipsum']) for t in subsection_titles]
         subsections_d = dict([(ss.title, ss) for ss in subsections_l])
-        section = MarkdownSection(title, level, [], {})
+        section = MarkdownSection(title, level, [], [])
         self.assert_section_valid(section, title, level, [], {})
         section.add_subsections(subsections_l)
         self.assert_section_valid(section, title, level, [], subsections_d)

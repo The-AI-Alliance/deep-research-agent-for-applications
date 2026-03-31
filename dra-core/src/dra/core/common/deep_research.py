@@ -9,7 +9,7 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from abc import abstractmethod
-from typing import Callable
+from typing import Callable, Optional
 
 from mcp_agent.agents.agent import Agent
 from mcp_agent.app import MCPApp
@@ -77,10 +77,10 @@ class DeepResearch():
                 raise ValueError(f"Unrecognized provider: {self.provider}")
 
         # These are lazily initialized in __finish_init!
-        self.mcp_app: MCPApp | None = None
-        self.orchestrator: DeepOrchestrator | None = None
-        self.token_counter: TokenCounter | None = None
-        self.logger: Logger | None = None
+        self.mcp_app: Optional[MCPApp] = None
+        self.orchestrator: Optional[DeepOrchestrator] = None
+        self.token_counter: Optional[TokenCounter] = None
+        self.logger: Optional[Logger] = None
 
     # A observer loop that will be executed in its own thread.
     async def update_loop(self, update_iteration_frequency_secs: float = 1.0):
