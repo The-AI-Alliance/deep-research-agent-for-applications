@@ -170,9 +170,10 @@ class TestVariables(unittest.TestCase):
         self.assertEqual("Not None", Variable.get_value(Variable(s, "Not None"), default="hello"))
 
     @given(no_brace_text())
-    def test_Variable_format_returns_None_if_kind_empty(self, string: str):
-        variable = Variable(string, string + "_value", kind='')
-        self.assertEqual(None, variable.format())
+    def test_Variable_format_returns_None_str_if_kind_empty(self, string: str):
+        variable = Variable(string, string + "_value", kind=Variable.no_format)
+        expected = (variable.key, variable.label, None)
+        self.assertEqual(expected, variable.format())
 
     @given(no_brace_text())
     def test_Variable_format_returns_simple_str_if_use_plain_formatting(self, string: str):
@@ -216,7 +217,7 @@ class TestVariables(unittest.TestCase):
     def test_provider_with_invalid_value(self, provider):
         variable = Variable('provider', 'bad', kind='provider')
         _, _, str = variable.format()
-        self.assertEqual(None, str)
+        self.assertEqual(Variable.unknown_provider, str)
 
 if __name__ == "__main__":
     unittest.main()

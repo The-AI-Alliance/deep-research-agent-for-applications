@@ -335,7 +335,7 @@ class MarkdownTree(MarkdownElement):
             MarkdownTree.enforce_valid_bullet(bullet)
         self.indentation = indentation
 
-    def add(self, child: MarkdownElement | str) -> MarkdownElement:
+    def add(self, child: MarkdownElement | str) -> MarkdownTree:
         """
         Add a sub bullet and return it.
         Python doesn't allow the `child` or return type to be declared
@@ -356,7 +356,7 @@ class MarkdownTree(MarkdownElement):
         self.children.append(c)
         return c
 
-    def add_children(self, children: Sequence[MarkdownElement | str]) -> Sequence[MarkdownElement]:
+    def add_children(self, children: Sequence[MarkdownElement | str]) -> Sequence[MarkdownTree]:
         """
         Add multiple sub bullets and return them.
         Python doesn't allow the `children` or return type to be declared
