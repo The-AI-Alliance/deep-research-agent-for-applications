@@ -9,7 +9,7 @@ def cwd() -> Path:
     return Path(os.path.realpath('.'))
 
 def this_files_directory(file: str|Path = __file__) -> Path:
-    return os.path.dirname(os.path.realpath(file))
+    return Path(os.path.dirname(os.path.realpath(file)))
 
 def resolve_path(path_str: str, possible_parent: Optional[Path], return_abs_path: bool = True) -> Path:
     """

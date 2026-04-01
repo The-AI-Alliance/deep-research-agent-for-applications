@@ -4,7 +4,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from mcp_agent.agents.agent import Agent
 from mcp_agent.logging.logger import Logger
@@ -49,7 +49,7 @@ class BaseTask():
     async def run(self, 
         orchestrator: DeepOrchestrator,
         logger: Logger,
-        **prompt_variables: Any) -> (TaskStatus, list[Any]):
+        **prompt_variables: Any) -> tuple[TaskStatus, list[Any]]:
         """
         Return the final status and the result, which are also attributes of the task object.
         """
@@ -64,7 +64,8 @@ class BaseTask():
         except Exception as ex:
             self.status = TaskStatus.FINISHED_EXCEPTION
             self.result = [f"Exception {ex} thrown in task {self.name}!"]
-            logger.error(str(self.result))
+            if logger:
+                logger.error(str(self.result))
             raise ex
         return (self.status, self.result)
 
@@ -76,7 +77,7 @@ class BaseTask():
 
     def attributes_as_strs(self, 
         variable_format: VariableFormat = VariableFormat.PLAIN, 
-        exclusions: set[str] = {}) -> dict[str,str]:
+        exclusions: set[str] = set()) -> dict[str,str]:
         """
         Return a dictionary of nicely-formatted labels and values for the attributes.
         The variable_format flag let's you change styles, e.g., 'markdown' or 'plain'
@@ -131,7 +132,7 @@ class BaseTask():
     def prepare_prompt(self, logger: Logger, prompt_variables: dict[str,str]) -> str:
         """Load and format a task prompt."""
         prompt_template = load_prompt_markdown(self.prompt_template_path)
-        self.prompt = replace_variables(prompt_template, **prompt_variables)
+        self.prompt = replace_variables(prompt_template, prompt_variables)
         if logger:  # may not be initialized in tests...
             logger.info(f"Writing the {self.name} task prompt to {self.prompt_saved_file}")
         with self.prompt_saved_file.open('w') as file:
@@ -156,7 +157,7 @@ class BaseTask():
             case _:
                 logger.info(msg)
 
-    def _get_val(self, key: str, default: Any) -> Any:
+    def __get_var(self, key: str, default: Any) -> Any:
         return Variable.get_value(self.properties.get(key), default)
 
 class GenerateTask(BaseTask):
@@ -175,15 +176,16 @@ class GenerateTask(BaseTask):
         orchestrator: DeepOrchestrator, 
         logger: Logger) -> list[Any]:
         logger.debug("GenerateTask: calling inference")
+        """TODO: What are the correct ways to pass the max_cost and max_time_minutes?"""
         return await orchestrator.generate(
             message=self.prompt,
-            request_params=RequestParams(
+            request_params=RequestParams( 
                 model=self.model_name, 
-                temperature=self._get_val('temperature', 0.7),
-                max_iterations=self._get_val('max_iterations', 10),
-                max_tokens=self._get_val('max_tokens', 100000),
-                max_cost=self._get_val('max_cost_dollars', 2.0),
-                max_time_minutes=self._get_val('max_time_minutes', 10),
+                temperature=self.__get_var('temperature', 0.7),
+                max_iterations=self.__get_var('max_iterations', 10),
+                maxTokens=self.__get_var('max_tokens', 100000),
+                max_cost=self.__get_var('max_cost_dollars', 2.0),        # ty: ignore[unknown-argument]
+                max_time_minutes=self.__get_var('max_time_minutes', 10), # ty: ignore[unknown-argument]
             ),
         )
 
@@ -207,6 +209,7 @@ class AgentTask(BaseTask):
     async def _run(self, 
         orchestrator: DeepOrchestrator, 
         logger: Logger) -> list[Any]:
+        """TODO: What are the correct ways to pass the max_cost and max_time_minutes?"""
         agent = Agent(
             name=self.name,
             instruction=self.prompt,
@@ -221,20 +224,21 @@ class AgentTask(BaseTask):
                 message=self.generate_prompt,
                 request_params=RequestParams(
                     model=self.model_name, 
-                    temperature=self._get_val('temperature', 0.7),
-                    max_iterations=self._get_val('max_iterations', 10),
-                    max_tokens=self._get_val('max_tokens', 100000),
-                    max_cost=self._get_val('max_cost_dollars', 2.0),
-                    max_time_minutes=self._get_val('max_time_minutes', 10),
+                    temperature=self.__get_var('temperature', 0.7),
+                    max_iterations=self.__get_var('max_iterations', 10),
+                    maxTokens=self.__get_var('max_tokens', 100000),
+                    max_cost=self.__get_var('max_cost_dollars', 2.0),        # ty: ignore[unknown-argument]
+                    max_time_minutes=self.__get_var('max_time_minutes', 10), # ty: ignore[unknown-argument]
                 ),
             )
 
-    def attributes_as_strs(self, variable_format: VariableFormat = VariableFormat.PLAIN, exclusions: set[str] = {}) -> dict[str,str]:
+    def attributes_as_strs(self, variable_format: VariableFormat = VariableFormat.PLAIN, exclusions: set[str] = set()) -> dict[str,str]:
         d = super().attributes_as_strs(variable_format=variable_format, exclusions=exclusions)
         if 'generate_prompt' not in exclusions:
             var = Variable('generate_prompt', self.generate_prompt)
             _, label, value_str = var.format(variable_format=variable_format)
-            d[label] = value_str
+            if value_str:
+                d[label] = value_str
         return d
 
     def __repr__(self) -> str: 

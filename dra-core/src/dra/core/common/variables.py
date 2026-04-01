@@ -35,7 +35,13 @@ class Variable():
     V = TypeVar("V")
 
     @classmethod
-    def get_value(cls, variable: Optional[Variable], default: Optional[V] = None) -> Optional[V]:
+    def get_value(cls, variable: Optional[Variable], default: V) -> V:
+        """
+        Get the value for an optional variable. It is optional in case the 
+        variable is retrieved from a dictionary and may not exist. If the 
+        variable is `None` or its value evaluates to `False`, return the 
+        input `default` value.
+        """
         if variable and variable.value:
             return variable.value
         else:
@@ -76,14 +82,14 @@ class Variable():
     def make_formatted(variables: Sequence[Variable], variable_format: VariableFormat = VariableFormat.PLAIN) -> list[tuple[str,str,str]]:
         """
         A helper method for common uses of Variables; return a list of
-        `(key, label, formatted(value))` pairs from the input sequence of
-        Variables, filtering out any were `variable.format() == `None`.
+        `(key, label, formatted_value)` pairs from the input sequence of
+        Variables, filtering out any were `formatted_value == `None`.
         The `variable_format` argument is passed to `format()`.
         """
         result = []
         for variable in variables:
             tuple = variable.format(variable_format=variable_format)
-            if tuple:
+            if tuple[2] != None:  # Empty string allowed!
                 result.append(tuple)
         return result
 

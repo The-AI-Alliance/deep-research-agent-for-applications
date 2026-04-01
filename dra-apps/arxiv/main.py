@@ -45,11 +45,11 @@ class ArXivParserUtil(ParserUtil):
 
     def _do_prompt_for_missing_args(self, up: UserPrompts) -> dict[str, any]:
         """Prompt the user for the query, if necessary."""
-        query = self.args.query
+        query = self.processed_args.get('query')
         if not query or not query.strip():
             query = up.read_multi_line_input("Input the query for your research")
         
-        categories = self.args.categories
+        categories = self.processed_args.get('categories')
         if not categories or not categories.strip():
             categories = up.read_one_line_input("Input any comma-separated ArXiv categories (https://arxiv.org/category_taxonomy), if any, to focus on",
                 empty_allowed=True)
@@ -116,7 +116,7 @@ def process_cli_arguments(parser_util: ParserUtil):
     in the project README.md.)
     """
 
-    parser_util.process_args()
+    processed_args = parser_util.process_args()
 
     # Custom paths for this app.
     # For example, the help for this option (and most output options) tells the user
@@ -126,13 +126,13 @@ def process_cli_arguments(parser_util: ParserUtil):
     # Obviously an 
     # output file isn't expected to exist yet, so `resolve_and_require_path` isn't called!
     
-    output_dir_path = parser_util.processed_args['output_dir_path']    
-    templates_dir_path = parser_util.processed_args['templates_dir_path']
+    output_dir_path = processed_args['output_dir_path']    
+    templates_dir_path = processed_args['templates_dir_path']
     # This must exist:
     arxiv_research_prompt_path = resolve_and_require_path(
-        parser_util.args.arxiv_research_prompt_path, templates_dir_path)
+        processed_args['arxiv_research_prompt_path'], templates_dir_path)
 
-    parser_util.processed_args['arxiv_research_prompt_path'] = \
+    processed_args['arxiv_research_prompt_path'] = \
         arxiv_research_prompt_path
 
 def create_variables(parser_util: ParserUtil) -> dict[str, Variable]:
@@ -192,7 +192,7 @@ def make_tasks(parser_util: ParserUtil, variables: dict[str, Variable]) -> list[
         GenerateTask(
             name="arxiv_research",
             title="📊 ArXiv Research Result",
-            model_name=parser_util.args.research_model,
+            model_name=variables['research_model'],
             prompt_template_path=variables['arxiv_research_prompt_path'].value,
             output_dir_path=variables['output_dir_path'].value,
             properties=variables),

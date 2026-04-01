@@ -61,7 +61,7 @@ class MarkdownUtil():
         indent = self.__value(indent, self.default_indent)
         key_format = self.__value(key_format, self.default_key_format)
 
-        prefix = f"{bullet} {key_format % (key)}" if key else ''
+        prefix = f"{bullet} {key_format % (key)}" if key else bullet
         lines = []
         if isinstance(item, list):
             if len(item):

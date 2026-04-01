@@ -1,4 +1,5 @@
-from typing import Any, Generic, Mapping, Optional, TypeVar
+from collections.abc import Mapping, MutableMapping
+from typing import Any, Generic, Optional, TypeVar
 from dra.core.common.variables import Variable
 
 SYSTEM = TypeVar("SYSTEM")
@@ -19,7 +20,7 @@ class Observer(Generic[SYSTEM]):
         ARGS:
             disallow_system_change (bool): An optional setting for observers that only want to allow one system to be set, the first time `update(system)` is called with a non-`None` system.
         """
-        self.system: SYSTEM = None
+        self.system: Optional[SYSTEM] = None
         self.disallow_system_change = disallow_system_change
         self.resume()
 
@@ -109,7 +110,7 @@ class Observer(Generic[SYSTEM]):
             if len(msgs):
                 msg = ' '.join(msgs)
                 if self.system and hasattr(self.system, "logger"):
-                    self.system.logger.error(f"Observer.update(new_system, ...): {msg}")
+                    self.system.logger.error(f"Observer.update(new_system, ...): {msg}")  # ty: ignore[unresolved-attribute]
                 raise ValueError(msg)
 
         if new_system and new_system != self.system:
@@ -157,20 +158,19 @@ class Observers(Observer):
     observers from the same system.
     """
 
-    def __init__(self, observers: Mapping[str, Observer] = {}):
+    def __init__(self, observers: MutableMapping[str, Observer]):
         super().__init__()
         """
         Create a collection of observers to manage as one. 
-        The dictionary of observers can't be empty.
+        The dictionary of observers is allowed to be empty, but no "observation"
+        can be done unless observers are added!
         This method doesn't have the `disallow_system_change` flag available
         for `Observer.__init__()`. Instead, set the flag on each observer passed to
         this method.
         """
-        if not observers:
-            raise ValueError("Observers() called with an empty list of observers!")
         self.observers = observers
 
-    def add_observers(self, extras: Mapping[str, Observer]):
+    def add_observers(self, extras: MutableMapping[str, Observer]):
         """
         Add more Observers. For safety, we raise an exception if a new key already exists!
         Nothing changes if `extras` is empty or None.

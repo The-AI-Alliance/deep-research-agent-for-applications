@@ -2,7 +2,7 @@
 from pathlib import Path
 import re
 
-def split_frontmatter_and_content(frontmatter_and_content: str) -> (str, str):
+def split_frontmatter_and_content(frontmatter_and_content: str) -> tuple[str, str]:
     """
     Split the frontmatter from the content, returning both in a tuple. The 
     expected format is the following:
@@ -26,7 +26,7 @@ def split_frontmatter_and_content(frontmatter_and_content: str) -> (str, str):
     if len(parts) == 3:
         return parts[1], parts[2]
     else:
-        return None, frontmatter_and_content
+        return '', frontmatter_and_content
 
 def load_prompt_markdown(path: Path) -> str:
     """

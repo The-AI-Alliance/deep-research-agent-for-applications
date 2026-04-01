@@ -35,9 +35,14 @@ class TestObserver(unittest.TestCase):
         def _do_update(self, 
             other: dict[str,Any] = {},
             is_final: bool = False) -> Any:
-            self.counts.append(self.system.count)
+            count = -1
+            # TODO. The ty typer can't tell that count is an attribute of
+            # of the actual Counter system we are using here.
+            if self.system and hasattr(self.system, 'count'):
+                count = self.system.count
+            self.counts.append(count)
             self.is_final = is_final
-            self.others[self.system.count] = other
+            self.others[count] = other
 
         def _after_set_system(self):
             self.counts = []

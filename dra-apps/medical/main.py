@@ -44,11 +44,11 @@ class MedicalParserUtil(ParserUtil):
 
     def _do_prompt_for_missing_args(self, up: UserPrompts) -> dict[str, any]:
         """Prompt the user for the query, if necessary."""
-        query = self.args.query
+        query = self.processed_args.get('query')
         if not query or not query.strip():
             query = up.read_multi_line_input("Input the query for your research")
         
-        terms = self.args.terms
+        terms = self.processed_args.get('terms')
         if not terms or not terms.strip():
             terms = up.read_one_line_input("Input any comma-separated terms and phrases for searches (spaces allowed)",
                 empty_allowed=True)
@@ -115,7 +115,7 @@ def process_cli_arguments(parser_util: ParserUtil):
     in the project README.md.)
     """
 
-    parser_util.process_args()
+    processed_args = parser_util.process_args()
 
     # Custom paths for this app.
     # For example, the help for this option (and most output options) tells the user
@@ -125,22 +125,23 @@ def process_cli_arguments(parser_util: ParserUtil):
     # Obviously an 
     # output file isn't expected to exist yet, so `resolve_and_require_path` isn't called!
     
-    output_dir_path = parser_util.processed_args['output_dir_path']    
-    templates_dir_path = parser_util.processed_args['templates_dir_path']
+    output_dir_path = processed_args['output_dir_path']    
+    templates_dir_path = processed_args['templates_dir_path']
     # This must exist:
     medical_research_prompt_path = resolve_and_require_path(
-        parser_util.args.medical_research_prompt_path, templates_dir_path)
+        processed_args['medical_research_prompt_path'], templates_dir_path)
 
-    parser_util.processed_args['medical_research_prompt_path'] = \
+    # Update it!
+    processed_args['medical_research_prompt_path'] = \
         medical_research_prompt_path
 
     # If terms given, construct the parameter part of a URL used for some data source queries.
-    terms = parser_util.processed_args.get('terms')
+    terms = processed_args.get('terms')
     if terms:
         params = []
         for term in terms.split(','):
             params.append("%22" + re.sub(r'\s+', '+', term.strip()) + "%22")
-        parser_util.processed_args['terms_url_params'] = "+OR+".join(params)
+        processed_args['terms_url_params'] = "+OR+".join(params)
 
 def create_variables(parser_util: ParserUtil) -> dict[str, Variable]:
     """
@@ -200,7 +201,7 @@ def make_tasks(parser_util: ParserUtil, variables: dict[str, Variable]) -> list[
         GenerateTask(
             name="medical_research",
             title="📊 Medical Research Result",
-            model_name=parser_util.args.research_model,
+            model_name=variables['research_model'].value,
             prompt_template_path=variables['medical_research_prompt_path'].value,
             output_dir_path=variables['output_dir_path'].value,
             properties=variables),

@@ -45,11 +45,11 @@ class FinanceParserUtil(ParserUtil):
 
     def _do_prompt_for_missing_args(self, up: UserPrompts) -> dict[str, any]:
         """Prompt the user for the company ticker and name, if necessary."""
-        ticker = self.args.ticker
+        ticker = self.processed_args.get('ticker')
         if not ticker or not ticker.strip():
             ticker = up.read_one_line_input("Input the company ticker symbol")
 
-        company_name = self.args.company_name
+        company_name = self.processed_args.get('company_name')
         if not company_name or not company_name.strip():
             company_name = up.read_one_line_input("Input the company name")
 
@@ -139,7 +139,7 @@ def process_cli_arguments(parser_util: ParserUtil):
     in the project README.md.)
     """
 
-    parser_util.process_args()
+    processed_args = parser_util.process_args()
 
     # Custom paths for this app, such as the output spreadsheet to write.
     # For example, the help for this option (and most output options) tells the user
@@ -149,8 +149,8 @@ def process_cli_arguments(parser_util: ParserUtil):
     # Obviously an 
     # output file isn't expected to exist yet, so `resolve_and_require_path` isn't called!
 
-    output_dir_path = parser_util.processed_args['output_dir_path']
-    output_spreadsheet_path = resolve_path(parser_util.args.output_spreadsheet, output_dir_path)
+    output_dir_path = processed_args['output_dir_path']
+    output_spreadsheet_path = resolve_path(processed_args['output_spreadsheet'], output_dir_path)
     
     # For example, the help for `--markdown-yaml-header`
     # tells the user that if the argument doesn't have a path prefix, we will read
@@ -165,14 +165,14 @@ def process_cli_arguments(parser_util: ParserUtil):
     # Template files (for the prompts here) work similarly, but because these
     # are input paths, we call `resolve_and_require_path` to ensure they exist. 
     # If not, an exception is raised.
-    templates_dir_path = parser_util.processed_args['templates_dir_path']
+    templates_dir_path = processed_args['templates_dir_path']
     # These must exist:
     financial_research_prompt_path = resolve_and_require_path(
-        parser_util.args.financial_research_prompt_path, templates_dir_path)
+        processed_args['financial_research_prompt_path'], templates_dir_path)
     excel_writer_agent_prompt_path = resolve_and_require_path(
-        parser_util.args.excel_writer_agent_prompt_path, templates_dir_path)
+        processed_args['excel_writer_agent_prompt_path'], templates_dir_path)
 
-    parser_util.processed_args.update({
+    processed_args.update({
         'output_spreadsheet_path':        output_spreadsheet_path, 
         'financial_research_prompt_path': financial_research_prompt_path,
         'excel_writer_agent_prompt_path': excel_writer_agent_prompt_path,
@@ -197,8 +197,8 @@ def create_variables(parser_util: ParserUtil) -> dict[str, Variable]:
         Variable("start_time",           parser_util.processed_args["start_time"]),
         Variable("ticker",               parser_util.processed_args["ticker"]),
         Variable("company_name",         parser_util.processed_args["company_name"]),
-        Variable("reporting_currency",   parser_util.args.reporting_currency),
-        Variable("units",                f"{parser_util.args.reporting_currency} millions"),
+        Variable("reporting_currency",   parser_util.processed_args['reporting_currency']),
+        Variable("units",                f"{parser_util.processed_args['reporting_currency']} millions"),
     ]
 
     # Add common values across apps:
@@ -206,7 +206,7 @@ def create_variables(parser_util: ParserUtil) -> dict[str, Variable]:
     
     # Finish with the remaining custom variables for this app and "verbose" variables:
     variables_list.extend([
-        Variable("excel_writer_model",             parser_util.args.excel_writer_model, kind='code'),
+        Variable("excel_writer_model",             parser_util.processed_args['excel_writer_model'], kind='code'),
         Variable("output_spreadsheet_path",        parser_util.processed_args["output_spreadsheet_path"], kind='file'),
         Variable("financial_research_prompt_path", parser_util.processed_args["financial_research_prompt_path"], kind='file'),
         Variable("excel_writer_agent_prompt_path", parser_util.processed_args["excel_writer_agent_prompt_path"], kind='file'),
@@ -237,14 +237,14 @@ def make_tasks(parser_util: ParserUtil, variables: dict[str, Variable]) -> list[
         GenerateTask(
             name="financial_research",
             title="📊 Financial Research Result",
-            model_name=parser_util.args.research_model,
+            model_name=variables['research_model'],
             prompt_template_path=variables['financial_research_prompt_path'].value,
             output_dir_path=variables['output_dir_path'].value,
             properties=variables),
         AgentTask(
             name="excel_writer",
             title="📈 Excel Creation Result",
-            model_name=parser_util.args.excel_writer_model,
+            model_name=variables['excel_writer_model'],
             prompt_template_path=variables['excel_writer_agent_prompt_path'].value,
             output_dir_path=variables['output_dir_path'].value,
             generate_prompt="Generate the Excel file with the provided financial data.",

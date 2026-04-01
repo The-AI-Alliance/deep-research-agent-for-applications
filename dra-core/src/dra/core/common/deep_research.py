@@ -54,28 +54,6 @@ class DeepResearch():
         self.observers = observers
         self.variables = variables
 
-        # TODO: https://github.com/The-AI-Alliance/deep-research-agent-for-applications/issues/53
-        # When the "factory" is actually used, it doesn't appear to read any of the configurations
-        # we define that specify the model. It only uses whatever is set as `default_model` in
-        # in the `mcp_agent.config*.yaml` files, even though there is logic in mcp_agent
-        # to look for a `default_model` kwarg, it doesn't appear to be used anywhere that matters
-        # to us!!
-        self.llm_factory = None
-        match self.provider:
-            case 'anthropic':
-                from mcp_agent.workflows.llm.augmented_llm_anthropic import \
-                    AnthropicAugmentedLLM
-                self.llm_factory = AnthropicAugmentedLLM
-            case 'openai' | 'ollama':
-                from mcp_agent.workflows.llm.augmented_llm_openai import \
-                    OpenAIAugmentedLLM
-                self.llm_factory = OpenAIAugmentedLLM
-            # case 'ollama':
-            #     from mcp_agent.workflows.llm.augmented_llm_ollama import OllamaAugmentedLLM
-            #     self.llm_factory = OllamaAIAugmentedLLM
-            case _:
-                raise ValueError(f"Unrecognized provider: {self.provider}")
-
         # These are lazily initialized in __finish_init!
         self.mcp_app: Optional[MCPApp] = None
         self.orchestrator: Optional[DeepOrchestrator] = None
@@ -99,13 +77,12 @@ class DeepResearch():
     async def run(self):
         await self.__finish_init()
 
-        verbose = Variable.get_value(self.variables.get('verbose'), False)
+        verbose = self.__get_var('verbose', False)
         if verbose:
             self.__print_details()
 
-        update_iteration_frequency_secs = Variable.get_value(
-            self.variables.get(
-                'update_iteration_frequency_secs'), 1.0)
+        update_iteration_frequency_secs = self.__get_var(
+            'update_iteration_frequency_secs', 1.0)
 
         async def do_work():
 
@@ -114,7 +91,7 @@ class DeepResearch():
                 self.update_loop(
                     update_iteration_frequency_secs=update_iteration_frequency_secs))
 
-            error_msg: str = None
+            error_msg: str = ''
             try:
                 error_msg = await self.run_tasks()
             finally:
@@ -147,7 +124,7 @@ class DeepResearch():
             # Run the orchestrator
             # Create the Deep Orchestrator with configuration
             self.orchestrator = DeepOrchestrator(
-                llm_factory=self.llm_factory,
+                llm_factory=self.__make_llm_factory(),
                 config=self.config,
                 context=app.context,
             )
@@ -167,20 +144,39 @@ class DeepResearch():
 
             self.logger.debug("Finished DeepResearch initialization")
 
-    def add_observers(self, observers: dict[str, Observer]) -> dict[str, Observer]:
+    def __make_llm_factory(self): 
+        # TODO: https://github.com/The-AI-Alliance/deep-research-agent-for-applications/issues/53
+        # When the "factory" is actually used, it doesn't appear to read any of the configurations
+        # we define that specify the model. It only uses whatever is set as `default_model` in
+        # in the `mcp_agent.config*.yaml` files, even though there is logic in mcp_agent
+        # to look for a `default_model` kwarg, it doesn't appear to be used anywhere that matters
+        # to us!!
+        match self.provider:
+            case 'anthropic':
+                from mcp_agent.workflows.llm.augmented_llm_anthropic import AnthropicAugmentedLLM
+                return AnthropicAugmentedLLM
+            case 'openai' | 'ollama':
+                from mcp_agent.workflows.llm.augmented_llm_openai import OpenAIAugmentedLLM
+                return OpenAIAugmentedLLM
+            # case 'ollama':
+                # from mcp_agent.workflows.llm.augmented_llm_ollama    import OllamaAugmentedLLM
+                # return OllamaAIAugmentedLLM
+            case _:
+                raise ValueError(f"Unrecognized provider: {self.provider}")
+
+    def add_observers(self, observers: dict[str, Observer]) -> Observers:
         """
         Add more observers and return the new dict of them. It is an error for a new
         key to match an existing key.
         """
         for key in observers.keys():
-            if key in self.observers:
+            if key in self.observers.observers:
                 raise ValueError("At least one key already exists in self.observers: current observers keys = {list(self.observers.keys())},  new observers keys = {list(observers.keys())}")
-        self.observers.extend(observers)
+        self.observers.add_observers(observers)
         return self.observers
 
-    # TODO: NOT CURRENTLY USED! Should we delete it??
-    # def __get_value(self, key: str, default: Any = None) -> Any:
-    #     return Variable.get_value(self.variables.get(key), default=default)
+    def __get_var(self, key: str, default: Any) -> Any:
+        return Variable.get_value(self.variables.get(key), default)
 
     async def run_tasks(self) -> str:
         """
@@ -191,21 +187,24 @@ class DeepResearch():
         previous_tasks_results = ''
         prompt_variables = dict([(v.key, v.value) for v in self.variables.values()])
         prompt_variables['previous_tasks_results'] = previous_tasks_results
-        for task in self.tasks:
-            status, result = await task.run(self.orchestrator, self.logger, **prompt_variables)
-            previous_tasks_results = f"{previous_tasks_results}\ntask {task.name} result:\n{result}\n"
-            prompt_variables['previous_tasks_results'] = previous_tasks_results
-            self.__save_task_raw_result(task.name, result)
-            if not status == TaskStatus.FINISHED_OK:
-                error_msg = f"Task sequence aborted due to failure of task {task.name}."
-                self.logger.error(error_msg)
-                return error_msg
-
+        if self.orchestrator and self.logger:
+            for task in self.tasks:
+                status, result = await task.run(self.orchestrator, self.logger, **prompt_variables)
+                previous_tasks_results = f"{previous_tasks_results}\ntask {task.name} result:\n{result}\n"
+                prompt_variables['previous_tasks_results'] = previous_tasks_results
+                self.__save_task_raw_result(task.name, result)
+                if not status == TaskStatus.FINISHED_OK:
+                    error_msg = f"Task sequence aborted due to failure of task {task.name}."
+                    self.logger.error(error_msg)
+                    return error_msg
+        else:
+            raise ValueError("self.orchestrator and self.logger can't be None!")
         return ''
         
     def __save_task_raw_result(self, name: str, result: list[Any]):
         result_file = self.output_dir_path / f"{name}_result.txt"
-        self.logger.info(f"Writing 'raw' returned result for task {name} to: {result_file}")
+        if self.logger:
+            self.logger.info(f"Writing 'raw' returned result for task {name} to: {result_file}")
         with open(result_file, "w") as file:
             for res in result:
                 file.write(str(res))
@@ -215,8 +214,10 @@ class DeepResearch():
         message_fmt = "    {0:40s}  {1}"
         pwd = os.path.dirname(os.path.realpath(__file__))
         props_strs = []
-        for key, l, v in Variable.make_formatted(self.variables.values(), variable_format=VariableFormat.PLAIN):
-            props_strs.append(message_fmt.format(f"{l}:", v))
+        if self.variables:
+            tuples = Variable.make_formatted(list(self.variables.values()), variable_format=VariableFormat.PLAIN)
+            for key, l, v in tuples:
+                props_strs.append(message_fmt.format(f"{l}:", v))
         props_str = "\n".join(props_strs)
         tasks_str = "\n".join([
             message_fmt.format(f"{n+1}:", str(self.tasks[n])) for n in range(len(self.tasks))
@@ -229,7 +230,8 @@ class DeepResearch():
 {tasks_str}  
 """
         print(message)
-        self.logger.info(message)
+        if self.logger:
+            self.logger.info(message)
 
         # Just to give the user time to see the above before the UX starts.
         time.sleep(2.0)  
@@ -261,20 +263,17 @@ class DeepResearch():
                 max_time_minutes=1,
             )
         else:
-            def get_val(key: str, default: Any) -> Any:
-                return Variable.get_value(variables.get(key), default)
-
             execution_config=ExecutionConfig(
-                max_iterations=get_val('max_iterations', 25),
-                max_replans=get_val('max_replans', 2),
-                max_task_retries=get_val('max_task_retries', 5),
-                enable_parallel=get_val('enable_parallel', True),
-                enable_filesystem=get_val('enable_filesystem', True),
+                max_iterations=self.__get_var('max_iterations', 25),
+                max_replans=self.__get_var('max_replans', 2),
+                max_task_retries=self.__get_var('max_task_retries', 5),
+                enable_parallel=self.__get_var('enable_parallel', True),
+                enable_filesystem=self.__get_var('enable_filesystem', True),
             )
             budget_config=BudgetConfig(
-                max_tokens=get_val('max_tokens', 100000),
-                max_cost=get_val('max_cost_dollars', 1.00),
-                max_time_minutes=get_val('max_time_minutes', 10),
+                max_tokens=self.__get_var('max_tokens', 100000),
+                max_cost=self.__get_var('max_cost_dollars', 1.00),
+                max_time_minutes=self.__get_var('max_time_minutes', 10),
             )
         config = DeepOrchestratorConfig(
             name=name,

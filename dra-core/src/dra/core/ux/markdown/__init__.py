@@ -8,10 +8,11 @@ import argparse
 import json
 import re
 import time
+from collections.abc import Sequence
 from datetime import datetime, timedelta
 from json.decoder import JSONDecodeError
 from pathlib import Path
-from typing import cast, no_type_check, Any, Generic, Mapping, Optional, Sequence
+from typing import cast, no_type_check, Any, Generic, Optional
 
 from mcp_agent.workflows.deep_orchestrator.orchestrator import DeepOrchestrator
 from openai.types.chat import ChatCompletionMessage
@@ -414,10 +415,13 @@ class MarkdownObserver(Observer[DeepResearch]):
         """
         Once the system is set, we finish initializing this object.
         """ 
-        if self.system.logger:
+        if self.system and self.system.logger:
             self.system.logger.info("MarkdownObserver._after_set_system() (self.system not None)")
-        self.monitor = MarkdownDeepOrchestratorMonitor(self.system.orchestrator)
-
+        if self.system and self.system.orchestrator:
+            self.monitor = MarkdownDeepOrchestratorMonitor(self.system.orchestrator)
+        else:
+            raise ValueError("self.system.orchestrator can't be None!")
+            
         output_dir_path = self.__get_var_value('output_dir_path', Path('./output'))
         self.research_report_path = self.__get_var_value('research_report_path',
             output_dir_path / 'research_report.md')
@@ -495,12 +499,12 @@ class MarkdownObserver(Observer[DeepResearch]):
             return ('', md_str)
         except (JSONDecodeError, TypeError) as err:
             err_msg = f"{err} raised while parsing attempting to parse {context} results."
-            if log_failure and self.system.logger:
+            if log_failure and self.system and self.system.logger:
                 self.system.logger.warning(f"{err_msg}: input = {s}")
             return (err_msg, [])
         except Exception as err:
             err_msg = f"{err} of type {type(err)} raised while parsing attempting to parse {context} results."
-            if log_failure and self.system.logger:
+            if log_failure and self.system and self.system.logger:
                 self.system.logger.warning(f"{err_msg}: input = {s}")
             return (err_msg, [])
 
@@ -510,8 +514,9 @@ class MarkdownObserver(Observer[DeepResearch]):
         # Make a Markdown table of the runtime properties. First wrap the keys in `...`
         # to render as fixed-width/code font.
         top_table = MarkdownTable("This Run's Properties", ['Property', 'Value'])
+        vars = list(self.system.variables.values()) if self.system and self.system.variables else []
         formatted = Variable.make_formatted(
-                list(self.system.variables.values()),
+                vars,
                 variable_format = VariableFormat.MARKDOWN)
         for key, label, value in formatted:
             top_table.add_row([label, value])
@@ -653,7 +658,7 @@ class MarkdownObserver(Observer[DeepResearch]):
                 elif not re.match(r'^\s*```\s*$', '', line):
                     result.append(line)
         except:
-            if self.system.logger:
+            if self.system and self.system.logger:
                 self.system.logger.error("Parsing out markdown failed! {content}") 
             result = content
             is_md = False
@@ -799,7 +804,7 @@ class MarkdownObserver(Observer[DeepResearch]):
     async def __update_token_usage(self) -> MarkdownSection:
         """Update the token usage, if available."""
         summary_info = ["Token usage not available"]
-        if self.system.token_counter:
+        if self.system and self.system.token_counter:
             summary = await self.system.token_counter.get_summary()
             if summary and hasattr(summary, "usage"):
                 summary_info = [f"* Total Tokens: {summary.usage.total_tokens}"]
@@ -828,7 +833,8 @@ class MarkdownObserver(Observer[DeepResearch]):
             with self.yaml_header_template.open('r') as file: 
                 template_str = file.read()
             if template_str:
+                vars = self.system.variables if self.system and self.system.variables else {}
                 yaml_header_str = replace_variables(template_str, 
-                    self.system.variables,
+                    vars,
                     title=self.title)
         return f"{yaml_header_str}\n{self.layout}"
