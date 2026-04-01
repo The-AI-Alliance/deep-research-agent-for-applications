@@ -1,7 +1,7 @@
 # Common string utilities
 
 import re
-from typing import Any
+from typing import Any, Optional
 
 def to_id(s: str) -> str:
     """
@@ -28,7 +28,7 @@ def clean_json_string(s: str, replacement: str = '') -> str:
     """
     return s.replace('\\\\', replacement)
 
-def truncate(s: str, n: int, ellipsis: str = None) -> str:
+def truncate(s: str, n: int, ellipsis: Optional[str] = None) -> str:
     if len(s) > n:
         sn = s[:n] 
         e_str = ellipsis if ellipsis else ''  # yes, ellipsis could be '' and we reassign it ''
@@ -52,14 +52,16 @@ class MarkdownUtil():
         self.default_indent = default_indent
         self.default_key_format = default_key_format
 
-    def __item(self, key: str, item: list[Any] | dict[str, Any] | str | float | int | tuple,
-        bullet: str, indent: str, key_format: str) -> list[str]:
+    def __item(self, key: Optional[str], item: list[Any] | dict[str, Any] | str | float | int | tuple,
+        bullet: Optional[str], 
+        indent: Optional[str], 
+        key_format: Optional[str]) -> list[str]:
 
         bullet = self.__value(bullet, self.default_bullet)
         indent = self.__value(indent, self.default_indent)
         key_format = self.__value(key_format, self.default_key_format)
 
-        prefix = f"{bullet} {key_format % (key)}" if key else bullet
+        prefix = f"{bullet} {key_format % (key)}" if key else ''
         lines = []
         if isinstance(item, list):
             if len(item):
@@ -77,18 +79,24 @@ class MarkdownUtil():
             lines.append(f"{prefix} {item}")
         return lines
 
-    def __value(self, s: str, default: str) -> str:
+    def __value(self, s: Optional[str], default: str) -> str:
         return s if s else default
 
-    def dict_to_markdown(self, items: dict[str, Any], 
-        bullet: str = None, indent: str = None, key_format: str = None) -> list[str]:
+    def dict_to_markdown(self, 
+        items: dict[str, Any], 
+        bullet: Optional[str] = None, 
+        indent: Optional[str] = None, 
+        key_format: Optional[str] = None) -> list[str]:
         lines = []
         for key, value in items.items():
             lines.extend(self.__item(key, value, bullet, indent, key_format))
         return lines
 
-    def list_to_markdown(self, items: list[Any], 
-        bullet: str = None, indent: str = None, key_format: str = None) -> list[str]:
+    def list_to_markdown(self, 
+        items: list[Any], 
+        bullet: Optional[str] = None, 
+        indent: Optional[str] = None, 
+        key_format: Optional[str] = None) -> list[str]:
         """
         The `key_format` value is used for _nested_ dictionaries only. See `MarkdownUtil.__init__`.
         """
@@ -99,7 +107,9 @@ class MarkdownUtil():
 
     def to_markdown(self, 
         item: list[Any] | dict[str, Any] | str | float | int | tuple,
-        bullet: str = None, indent: str = None, key_format: str = None) -> list[str]:
+        bullet: Optional[str] = None,
+        indent: Optional[str] = None,
+        key_format: Optional[str] = None) -> list[str]:
         """
         Return hierarchical Markdown bullets as a list for an input `item`.
         For dictionaries, the `key_format` is used to format keys, e.g., `**%s**:`
