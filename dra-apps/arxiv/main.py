@@ -13,6 +13,7 @@ This application demonstrates the Deep Orchestrator (AdaptiveOrchestrator) for r
 
 import asyncio
 import re
+from collections.abc import Sequence
 from pathlib import Path
 from dra.core.common.observer import Observer
 from dra.core.common.tasks import BaseTask, GenerateTask, AgentTask
@@ -170,7 +171,7 @@ def create_variables(parser_util: ParserUtil) -> dict[str, Variable]:
 
     return dict([(v.key, v) for v in variables_list])
 
-def make_tasks(parser_util: ParserUtil, variables: dict[str, Variable]) -> list[BaseTask]:
+def make_tasks(parser_util: ParserUtil, variables: dict[str, Variable]) -> Sequence[BaseTask]:
     """
     Create the tasks for this research agent. All applications will start with a 
     `GenerateTask` to drive the `mcp-agent` "Deep Orchestrator" that invokes the tools

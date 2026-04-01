@@ -5,7 +5,7 @@ import os
 import re
 import sys
 import time
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -368,9 +368,9 @@ class Runner():
     """
 
     def __init__(self,
-        tasks: list[BaseTask],
+        tasks: Sequence[BaseTask],
         available_servers: list[str],
-        extra_observers: dict[str, Observer],
+        extra_observers: Mapping[str, Observer],
         parser_util: ParserUtil,
         variables: dict[str, Variable]):
         """
@@ -400,7 +400,7 @@ class Runner():
 
         # Get the common observers and the display. You can add observers here,
         # if you have additional ones.
-        self.observers = self.__get_observers(extra_observers)
+        self.observers = self.__add_observers(extra_observers)
         self.display = self.parser_util.processed_args['display']
         
         # Create our deep research wrapper.
@@ -417,7 +417,7 @@ class Runner():
         """Run the application!"""
         await self.deep_research.run()
 
-    def __get_observers(self, extra_observers: dict[str, Observer]) -> Observers:
+    def __add_observers(self, extra_observers: Mapping[str, Observer]) -> Observers:
         # Verify there are no duplicates!
         observers = self.parser_util.processed_args['observers']  
         try:

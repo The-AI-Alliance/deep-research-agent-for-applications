@@ -114,7 +114,7 @@ class DeepResearch():
         particular order, so we can do this step asynchronously...
         """ 
 
-        settings = self.__get_var_value('mcp_agent_config_path', None)
+        settings = self.__get_var('mcp_agent_config_path', None)
         if settings:
             settings = str(settings) # convert from Path to str.
         self.mcp_app = MCPApp(name=self.app_name, settings=settings)
@@ -176,6 +176,8 @@ class DeepResearch():
         return self.observers
 
     def __get_var(self, key: str, default: Any) -> Any:
+        if not self.variables:
+            raise ValueError("Logic error: self.variables not yet initialized!")
         return Variable.get_value(self.variables.get(key), default)
 
     async def run_tasks(self) -> str:
@@ -263,17 +265,20 @@ class DeepResearch():
                 max_time_minutes=1,
             )
         else:
+            def var(key: str, default: Any) -> Any:
+                return Variable.get_value(variables.get(key), default)
+
             execution_config=ExecutionConfig(
-                max_iterations=self.__get_var('max_iterations', 25),
-                max_replans=self.__get_var('max_replans', 2),
-                max_task_retries=self.__get_var('max_task_retries', 5),
-                enable_parallel=self.__get_var('enable_parallel', True),
-                enable_filesystem=self.__get_var('enable_filesystem', True),
+                max_iterations=var('max_iterations', 25),
+                max_replans=var('max_replans', 2),
+                max_task_retries=var('max_task_retries', 5),
+                enable_parallel=var('enable_parallel', True),
+                enable_filesystem=var('enable_filesystem', True),
             )
             budget_config=BudgetConfig(
-                max_tokens=self.__get_var('max_tokens', 100000),
-                max_cost=self.__get_var('max_cost_dollars', 1.00),
-                max_time_minutes=self.__get_var('max_time_minutes', 10),
+                max_tokens=var('max_tokens', 100000),
+                max_cost=var('max_cost_dollars', 1.00),
+                max_time_minutes=var('max_time_minutes', 10),
             )
         config = DeepOrchestratorConfig(
             name=name,
@@ -282,9 +287,3 @@ class DeepResearch():
             budget=budget_config,
         )
         return config
-
-    def __get_var_value(self, key: str, default: Any = None) -> Any:
-        if not self.variables:
-            raise ValueError("Logic error: self.variables not yet initialized!")
-        variable = self.variables.get(key)
-        return variable.value if variable else default
