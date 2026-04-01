@@ -246,13 +246,17 @@ type-check-core::
 type-check-core-watch::
 	@echo "Running 'ty' on dra-core in 'watch' mode."
 	cd ${DRA_CORE_DIR} && uvx ty check --watch
-type-check-apps::
+type-check-apps:: install-core
 	@echo "Running 'ty' on dra-apps."
-	cd ${DRA_APPS_DIR} && uv pip install -U ../dra-core && uvx ty check
-type-check-apps-watch::
+	cd ${DRA_APPS_DIR} && uvx ty check
+type-check-apps-watch:: install-core
 	@echo "Running 'ty' on dra-apps in 'watch' mode."
-	cd ${DRA_APPS_DIR} && uv pip install -U ../dra-core && uvx ty check --watch
+	cd ${DRA_APPS_DIR} && uvx ty check --watch
 
+.PHONY: install-core
+
+install-core::
+	cd ${DRA_APPS_DIR} && uv pip install -U ../dra-core
 
 .PHONY: test tests test-dra-core
 
@@ -261,7 +265,7 @@ test tests test-dra-core::
 	cd ${DRA_CORE_DIR} && uv run python -m unittest discover ${VERBOSE}
 
 app-run:: before-app-run do-app-run-${APP} after-app-run
-before-app-run:: app-check setup-output-dir
+before-app-run:: app-check setup-output-dir install-core
 
 # Note that OUTPUT_DIR is defined relative to DRA_APPS_DIR, but we are currently not in DRA_APPS_DIR
 setup-output-dir::

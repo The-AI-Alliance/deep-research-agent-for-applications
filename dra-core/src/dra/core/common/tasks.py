@@ -157,7 +157,7 @@ class BaseTask():
             case _:
                 logger.info(msg)
 
-    def __get_var(self, key: str, default: Any) -> Any:
+    def _get_var(self, key: str, default: Any) -> Any:
         return Variable.get_value(self.properties.get(key), default)
 
 class GenerateTask(BaseTask):
@@ -181,11 +181,11 @@ class GenerateTask(BaseTask):
             message=self.prompt,
             request_params=RequestParams( 
                 model=self.model_name, 
-                temperature=self.__get_var('temperature', 0.7),
-                max_iterations=self.__get_var('max_iterations', 10),
-                maxTokens=self.__get_var('max_tokens', 100000),
-                max_cost=self.__get_var('max_cost_dollars', 2.0),        # ty: ignore[unknown-argument]
-                max_time_minutes=self.__get_var('max_time_minutes', 10), # ty: ignore[unknown-argument]
+                temperature=self._get_var('temperature', 0.7),
+                max_iterations=self._get_var('max_iterations', 10),
+                maxTokens=self._get_var('max_tokens', 100000),
+                max_cost=self._get_var('max_cost_dollars', 2.0),        # ty: ignore[unknown-argument]
+                max_time_minutes=self._get_var('max_time_minutes', 10), # ty: ignore[unknown-argument]
             ),
         )
 
@@ -224,11 +224,11 @@ class AgentTask(BaseTask):
                 message=self.generate_prompt,
                 request_params=RequestParams(
                     model=self.model_name, 
-                    temperature=self.__get_var('temperature', 0.7),
-                    max_iterations=self.__get_var('max_iterations', 10),
-                    maxTokens=self.__get_var('max_tokens', 100000),
-                    max_cost=self.__get_var('max_cost_dollars', 2.0),        # ty: ignore[unknown-argument]
-                    max_time_minutes=self.__get_var('max_time_minutes', 10), # ty: ignore[unknown-argument]
+                    temperature=self._get_var('temperature', 0.7),
+                    max_iterations=self._get_var('max_iterations', 10),
+                    maxTokens=self._get_var('max_tokens', 100000),
+                    max_cost=self._get_var('max_cost_dollars', 2.0),        # ty: ignore[unknown-argument]
+                    max_time_minutes=self._get_var('max_time_minutes', 10), # ty: ignore[unknown-argument]
                 ),
             )
 
