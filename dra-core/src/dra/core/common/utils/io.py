@@ -52,12 +52,20 @@ class UserPrompts():
         """
         Prompt the user for a single line of text input.
         """     
-        while True:
-            a = Prompt.ask(f"[green]{prompt}[/green]",
-                choices=choices, default=default)
-            answer = answer.strip() if answer else ''
-            if answer or empty_allowed:
-                return answer
+        try:
+            while True:
+                a = ''
+                if choices:
+                    a = Prompt.ask(f"[green]{prompt}[/green]",
+                        choices=choices, default=default)
+                else:
+                    a = Prompt.ask(f"[green]{prompt}[/green]",
+                        default=default)
+                answer = a.strip() if a else ''
+                if answer or empty_allowed:
+                    return answer
+        except (KeyboardInterrupt, EOFError):
+            return ''
 
     def confirm(self, prompt) -> bool:
         """

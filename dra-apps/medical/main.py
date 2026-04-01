@@ -15,6 +15,8 @@ import asyncio
 import re
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
+
 from dra.core.common.observer import Observer
 from dra.core.common.tasks import BaseTask, GenerateTask, AgentTask
 from dra.core.common.utils.io import UserPrompts
@@ -43,7 +45,7 @@ class MedicalParserUtil(ParserUtil):
     def __init__(self, which_app: str, app_name: str, ux_title: str, description: str):
         super().__init__(which_app, app_name, ux_title, description)
 
-    def _do_prompt_for_missing_args(self, up: UserPrompts) -> dict[str, any]:
+    def _do_prompt_for_missing_args(self, up: UserPrompts) -> dict[str, Any]:
         """Prompt the user for the query, if necessary."""
         query = self.processed_args.get('query')
         if not query or not query.strip():

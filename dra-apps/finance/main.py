@@ -14,6 +14,8 @@ This application demonstrates the Deep Orchestrator (AdaptiveOrchestrator) for f
 import asyncio, sys
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
+
 from dra.core.common.observer import Observer
 from dra.core.common.tasks import BaseTask, GenerateTask, AgentTask
 from dra.core.common.utils.io import UserPrompts
@@ -44,7 +46,7 @@ class FinanceParserUtil(ParserUtil):
     def __init__(self, which_app: str, app_name: str, ux_title: str, description: str):
         super().__init__(which_app, app_name, ux_title, description)
 
-    def _do_prompt_for_missing_args(self, up: UserPrompts) -> dict[str, any]:
+    def _do_prompt_for_missing_args(self, up: UserPrompts) -> dict[str, Any]:
         """Prompt the user for the company ticker and name, if necessary."""
         ticker = self.processed_args.get('ticker')
         if not ticker or not ticker.strip():
@@ -238,14 +240,14 @@ def make_tasks(parser_util: ParserUtil, variables: dict[str, Variable]) -> Seque
         GenerateTask(
             name="financial_research",
             title="📊 Financial Research Result",
-            model_name=variables['research_model'],
+            model_name=variables['research_model'].value,
             prompt_template_path=variables['financial_research_prompt_path'].value,
             output_dir_path=variables['output_dir_path'].value,
             properties=variables),
         AgentTask(
             name="excel_writer",
             title="📈 Excel Creation Result",
-            model_name=variables['excel_writer_model'],
+            model_name=variables['excel_writer_model'].value,
             prompt_template_path=variables['excel_writer_agent_prompt_path'].value,
             output_dir_path=variables['output_dir_path'].value,
             generate_prompt="Generate the Excel file with the provided financial data.",

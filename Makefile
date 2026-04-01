@@ -235,14 +235,23 @@ ${apps_help}::
 	${MAKE} APP=${@:app-help-%=%} app-help
 
 .PHONY: type-check type-check-core type-check-apps
+.PHONY: type-check-watch type-check-core-watch type-check-apps-watch
 
 type-check:: type-check-core type-check-apps
+type-check-watch:: type-check-core-watch type-check-apps-watch
+
 type-check-core::
-	@echo "Running 'ty' on dra-core..."
+	@echo "Running 'ty' on dra-core."
 	cd ${DRA_CORE_DIR} && uvx ty check
+type-check-core-watch::
+	@echo "Running 'ty' on dra-core in 'watch' mode."
+	cd ${DRA_CORE_DIR} && uvx ty check --watch
 type-check-apps::
-	@echo "Running 'ty' on dra-apps..."
-	cd ${DRA_APPS_DIR} && uvx ty check
+	@echo "Running 'ty' on dra-apps."
+	cd ${DRA_APPS_DIR} && uv pip install -U ../dra-core && uvx ty check
+type-check-apps-watch::
+	@echo "Running 'ty' on dra-apps in 'watch' mode."
+	cd ${DRA_APPS_DIR} && uv pip install -U ../dra-core && uvx ty check --watch
 
 
 .PHONY: test tests test-dra-core
@@ -331,15 +340,26 @@ show-output-files::
 	@cd "${DRA_APPS_DIR}/${OUTPUT_DIR}" && find . -type f -exec ls -lh {} \;
 
 # Build targets
-.PHONY: build build-apps build-core
+.PHONY: build build-apps build-core build-clean build-apps-clean build-core-clean
 
 build:: build-core build-apps
-build-core::
+build-clean: build-core-clean build-apps-clean
+
+build-core:: build-core-clean
 	@echo "Building dra-core package in ${DRA_CORE_DIR}..."
 	cd ${DRA_CORE_DIR} && uv build && echo "Contents of ${DRA_CORE_DIR}/dist:" && ls -l dist
-build-apps::
+build-core-clean::
+	rm -rf ${DRA_CORE_DIR}/dist
+	rm -rf ${DRA_CORE_DIR}/build
+	rm -rf ${DRA_CORE_DIR}/.venv/lib/python3.12/site-packages/dra*
+
+build-apps:: build-apps-clean
 	@echo "Building dra-apps package in ${DRA_APPS_DIR}..."
 	cd ${DRA_APPS_DIR} && uv build && echo "Contents of ${DRA_APPS_DIR}/dist:" && ls -l dist
+build-apps-clean::
+	rm -rf ${DRA_APPS_DIR}/dist
+	rm -rf ${DRA_APPS_DIR}/build
+	rm -rf ${DRA_APPS_DIR}/.venv/lib/python3.12/site-packages/dra*
 
 .PHONY: install install-apps install-core 
 

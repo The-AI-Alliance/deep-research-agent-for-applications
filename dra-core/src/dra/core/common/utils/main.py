@@ -5,7 +5,7 @@ import os
 import re
 import sys
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping, MutableMapping, Sequence
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -31,7 +31,7 @@ class ParserUtil():
         self.description = description
 
         self.parser = self.make_parser()
-        self.processed_args: dict[str, Any] = {} # Updated by self.process_args()
+        self.processed_args: MutableMapping[str, Any] = {} # Updated by self.process_args()
 
         self.defaults = {
             'report-title': None,
@@ -243,7 +243,7 @@ class ParserUtil():
                 mr = self.__to_valid_file_name(self.ux_title) + " Analysis Report.md"
         return resolve_path(mr, output_dir_path)
 
-    def process_args(self) -> Mapping[str, Any]:
+    def process_args(self) -> MutableMapping[str, Any]:
         args = self.parser.parse_args()
 
         prompted_values = self.prompt_for_missing_args()
@@ -306,7 +306,7 @@ class ParserUtil():
         
         observers = Observers(observers=observers_d)
 
-        self.processed_args: Mapping[str, Any] = {
+        self.processed_args: MutableMapping[str, Any] = {
             'start_time': datetime.now().strftime('%Y-%m-%d %H:%M%:%S'),
             'display': display,
             'observers': observers,
@@ -325,7 +325,7 @@ class ParserUtil():
         self.processed_args.update(prompted_values)
 
         # Add any other kvs from "args":
-        for key, value in vars(args):
+        for key, value in vars(args).items():
             if not key in self.processed_args:
                 self.processed_args[key] = value
 
@@ -424,4 +424,4 @@ class Runner():
             observers.add_observers(extra_observers)  
         except ValueError as ve:
             raise ValueError(f'The extra observers passed to Runner have at least some keys that collide with the app-defined observers.') from ve
-        return Observers(observers)
+        return observers
