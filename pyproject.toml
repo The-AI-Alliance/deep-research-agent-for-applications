@@ -1,6 +1,6 @@
 [project]
 name = "deep-research-agent"
-version = "1.0.0"
+version = "1.1.0"
 description = "MCP-based deep research toolkit with example applications in several domains: finance, medical, other research."
 readme = "README.md"
 requires-python = ">=3.12"
