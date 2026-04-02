@@ -11,8 +11,7 @@ This application demonstrates the Deep Orchestrator (AdaptiveOrchestrator) for r
 - Full state visibility throughout execution
 """
 
-import asyncio
-import re
+import argparse, asyncio, re
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -45,13 +44,13 @@ class ArXivParserUtil(ParserUtil):
     def __init__(self, which_app: str, app_name: str, ux_title: str, description: str):
         super().__init__(which_app, app_name, ux_title, description)
 
-    def _do_prompt_for_missing_args(self, up: UserPrompts) -> dict[str, Any]:
+    def _do_prompt_for_missing_args(self, up: UserPrompts, args: argparse.Namespace) -> dict[str, Any]:
         """Prompt the user for the query, if necessary."""
-        query = self.processed_args.get('query')
+        query = args.query
         if not query or not query.strip():
             query = up.read_multi_line_input("Input the query for your research")
         
-        categories = self.processed_args.get('categories')
+        categories = args.categories
         if not categories or not categories.strip():
             categories = up.read_one_line_input("Input any comma-separated ArXiv categories (https://arxiv.org/category_taxonomy), if any, to focus on",
                 empty_allowed=True)

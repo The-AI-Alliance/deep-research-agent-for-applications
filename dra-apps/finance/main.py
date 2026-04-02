@@ -11,7 +11,7 @@ This application demonstrates the Deep Orchestrator (AdaptiveOrchestrator) for f
 - Full state visibility throughout execution
 """
 
-import asyncio, sys
+import argparse, asyncio, sys
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -46,13 +46,13 @@ class FinanceParserUtil(ParserUtil):
     def __init__(self, which_app: str, app_name: str, ux_title: str, description: str):
         super().__init__(which_app, app_name, ux_title, description)
 
-    def _do_prompt_for_missing_args(self, up: UserPrompts) -> dict[str, Any]:
+    def _do_prompt_for_missing_args(self, up: UserPrompts, args: argparse.Namespace) -> dict[str, Any]:
         """Prompt the user for the company ticker and name, if necessary."""
-        ticker = self.processed_args.get('ticker')
+        ticker = args.ticker
         if not ticker or not ticker.strip():
             ticker = up.read_one_line_input("Input the company ticker symbol")
 
-        company_name = self.processed_args.get('company_name')
+        company_name = args.company_name
         if not company_name or not company_name.strip():
             company_name = up.read_one_line_input("Input the company name")
 

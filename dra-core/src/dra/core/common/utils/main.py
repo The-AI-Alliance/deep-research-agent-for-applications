@@ -203,7 +203,7 @@ class ParserUtil():
             help="Print some extra output. Useful for some testing and debugging scenarios."
         )
 
-    def prompt_for_missing_args(self) -> dict[str, Any]:
+    def prompt_for_missing_args(self, args: argparse.Namespace) -> dict[str, Any]:
         """
         Prompt the user for one or more arguments if they aren't provided on the command
         line. Derived classes should only override _do_prompt_for_missing_args(), which
@@ -211,15 +211,15 @@ class ParserUtil():
         which is currently the `--report-title` argument only.
         """
         up = UserPrompts()
-        values = self._do_prompt_for_missing_args(up)
-        research_report_title = self.processed_args.get('report_title')
+        values = self._do_prompt_for_missing_args(up, args)
+        research_report_title = args.report_title
         if not research_report_title or not research_report_title.strip():
             research_report_title = up.read_one_line_input("Input the report title",
                 default="Analysis Report")
         values['research_report_title'] = research_report_title
         return values
 
-    def _do_prompt_for_missing_args(self, up: UserPrompts) -> dict[str, Any]:
+    def _do_prompt_for_missing_args(self, up: UserPrompts, args: argparse.Namespace) -> dict[str, Any]:
         """Derived classes can override this method. They don't need to call this parent version."""
         return {}
 
@@ -246,7 +246,7 @@ class ParserUtil():
     def process_args(self) -> MutableMapping[str, Any]:
         args = self.parser.parse_args()
 
-        prompted_values = self.prompt_for_missing_args()
+        prompted_values = self.prompt_for_missing_args(args)
 
         # Ensure output directory exists
         output_dir_path = Path(args.output_dir)
@@ -255,9 +255,7 @@ class ParserUtil():
         markdown_report_path = self._determine_report_path(output_dir_path,
             research_report_title = prompted_values.get('research_report_title'))
 
-        templates_dir_path = Path(args.templates_dir)
-        if not templates_dir_path.exists():
-            raise ValueError(f"Prompt directory '{templates_dir_path}' doesn't exist!")
+        templates_dir_path = resolve_and_require_path(args.templates_dir, possible_parent=None, return_abs_path=False)
 
         markdown_yaml_header_path = None
         if args.markdown_yaml_header:
@@ -324,7 +322,7 @@ class ParserUtil():
         }
         self.processed_args.update(prompted_values)
 
-        # Add any other kvs from "args":
+        # Add any other kvs from "args" that aren't already in the dict.
         for key, value in vars(args).items():
             if not key in self.processed_args:
                 self.processed_args[key] = value

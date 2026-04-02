@@ -124,13 +124,15 @@ make app-help           # Run the ${APP} application with --help to see the supp
 make app-help-<foo>     # Show help for the <foo> application.
 make app-setup          # One-time setup of the application dependences.
 make test               # Run the automated tests. ("make tests" is a synonym...)
-make type-check         # Run the "ty" type checker on the code.
 make build              # Build distributions of the DRA "core" and apps.
 make build-core         # Build a distribution of the DRA "core".
 make build-apps         # Build a distribution of the applications.
-make install            # Install the the DRA "core" and apps locally in development mode.
+make install            # Install the the DRA "core" and applications locally in development mode.
 make install-core       # Install a distribution of the DRA "core".
 make install-apps       # Install a distribution of the applications.
+make type-check         # Run the "ty" type checker on the code.
+make type-check-core    # Run the "ty" type checker on the "core" code.
+make type-check-apps    # Run the "ty" type checker on the applications code.
 
 Targets for the GitHub pages documentation:
 
@@ -234,6 +236,12 @@ apps_help := ${APPS:%=app-help-%}
 ${apps_help}::
 	${MAKE} APP=${@:app-help-%=%} app-help
 
+.PHONY: test tests test-dra-core
+
+test tests test-dra-core::
+	@echo "Running dra-core tests..."
+	cd ${DRA_CORE_DIR} && uv run python -m unittest discover ${VERBOSE}
+
 .PHONY: type-check type-check-core type-check-apps
 .PHONY: type-check-watch type-check-core-watch type-check-apps-watch
 
@@ -258,11 +266,6 @@ type-check-apps-watch:: install-core
 install-core::
 	cd ${DRA_APPS_DIR} && uv pip install -U ../dra-core
 
-.PHONY: test tests test-dra-core
-
-test tests test-dra-core::
-	@echo "Running dra-core tests..."
-	cd ${DRA_CORE_DIR} && uv run python -m unittest discover ${VERBOSE}
 
 app-run:: before-app-run do-app-run-${APP} after-app-run
 before-app-run:: app-check setup-output-dir install-core
