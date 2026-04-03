@@ -6,18 +6,20 @@
 # WARNING: At this time, these model definitions actually don't work. You have
 # to set the "default_model" in the mcp_agent.config.yaml (when using OpenAI or
 # Anthropic) or mcp_agent.config.ollama.yaml (when using ollama).
-OPENAI_RESEARCH_MODEL="gpt-4o"
-OPENAI_EXCEL_WRITER_MODEL="o4-mini"
-OLLAMA_RESEARCH_MODEL="gpt-oss:20b"
-#OLLAMA_RESEARCH_MODEL="qwen3.5:27b"
+: ${OPENAI_RESEARCH_MODEL:="gpt-4o"}
+: ${OPENAI_EXCEL_WRITER_MODEL:="o4-mini"}
+: ${OLLAMA_RESEARCH_MODEL:="gpt-oss:20b"}
+: ${OLLAMA_QWEN_RESEARCH_MODEL:="qwen3.5:35b"}
 # When running with Ollama, there is less need to run a low-cost model 
 # for the Excel spreadsheet generation task, and keeping the same model
 # in memory saves time.
-OLLAMA_EXCEL_WRITER_MODEL="$OLLAMA_RESEARCH_MODEL"
+: ${OLLAMA_EXCEL_WRITER_MODEL:="$OLLAMA_RESEARCH_MODEL"}
+: ${OLLAMA_QWEN_EXCEL_WRITER_MODEL:="$OLLAMA_QWEN_RESEARCH_MODEL"}
 
 help() {
 	cat <<EOF
 Usage: $0 [options] [make_options]
+
 Where the options are:
 --target  TARGET  Build make target TARGET (default: app-run)
 --finance         Run the finance app (default)
@@ -44,6 +46,9 @@ For the medical and arxiv app:
 --ollama          Use Ollama models for inference:
                     Orchestration:    $OLLAMA_RESEARCH_MODEL
                     Excel report gen: $OLLAMA_EXCEL_WRITER_MODEL
+--qwen            Use Ollama-served Qwen models for inference:
+                    Orchestration:    $OLLAMA_QWEN_RESEARCH_MODEL
+                    Excel report gen: $OLLAMA_QWEN_EXCEL_WRITER_MODEL
 --short | --short-run
                   Do a short run (low "max values" for testing)
 --noop            Just print the command that will be executed, but don't run it.
@@ -153,6 +158,13 @@ do
 		vars+=(
 			RESEARCH_MODEL="$OLLAMA_RESEARCH_MODEL"
 			EXCEL_WRITER_MODEL="$OLLAMA_EXCEL_WRITER_MODEL"
+			INFERENCE_PROVIDER="ollama"
+		)
+		;;
+	--qwen)
+		vars+=(
+			RESEARCH_MODEL="$OLLAMA_QWEN_RESEARCH_MODEL"
+			EXCEL_WRITER_MODEL="$OLLAMA_QWEN_EXCEL_WRITER_MODEL"
 			INFERENCE_PROVIDER="ollama"
 		)
 		;;

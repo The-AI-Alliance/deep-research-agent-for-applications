@@ -11,7 +11,7 @@ MAKEFLAGS           ?= # -w --warn-undefined-variables
 MAKEFLAGS_RECURSIVE ?= # --print-directory (only useful for recursive makes...)
 UNAME               ?= $(shell uname)
 ARCHITECTURE        ?= $(shell uname -m)
-TIMESTAMP           ?=$(shell date "+%Y-%m-%d_%H-%M-%S")
+TIMESTAMP           ?= $(shell date "+%Y-%m-%d_%H-%M-%S")
 
 ## App defaults
 # Call make 
@@ -58,25 +58,25 @@ MEDICAL_RESEARCH_PROMPT_FILE ?= medical_research_agent.md
 ARXIV_RESEARCH_PROMPT_FILE   ?= arxiv_research_agent.md
 
 # For all apps:
+LOG_DIR                      ?= logs/${APP}
 
 # Relative directory paths are relative to ${DRA_APPS_DIR}:
 ifeq (finance,${APP})
-	OUTPUT_DIR              ?= output/${APP}/${TICKER}
+	OUTPUT_DIR              ?= output/${APP}/${TICKER}/${TIMESTAMP}
 	OUTPUT_REPORT           ?= ${TICKER}_report.md
 	REPORT_TITLE            ?= ${TICKER} Report
 else ifeq (medical,${APP})
-	OUTPUT_DIR              ?= output/${APP}
+	OUTPUT_DIR              ?= output/${APP}/${TIMESTAMP}
 	# Instead of defining a default here, use the user-supplied title
 	# to create the report name.
 	# OUTPUT_REPORT           ?= medical-report.md
 else ifeq (arxiv,${APP})
-	OUTPUT_DIR              ?= output/${APP}
+	OUTPUT_DIR              ?= output/${APP}/${TIMESTAMP}
 	# Instead of defining a default here, use the user-supplied title
 	# to create the report name.
 	# OUTPUT_REPORT           ?= arxiv-report.md
 else
-	OUTPUT_DIR              ?= output/${APP}/${TIMESTAMP}
-	OUTPUT_REPORT           ?= report.md
+    $(error "Unknown value for APP: ${APP}")
 endif
 
 REL_APP_PATH               ?= ${APP}/main.py
@@ -94,7 +94,7 @@ endif
 TEMPERATURE                ?= 0.7
 MAX_ITERATIONS             ?= 25
 
-clean_code_dirs := logs ${DRA_APPS_DIR}/output ${DRA_CORE_DIR}/.hypothesis
+clean_code_dirs := ${DRA_APPS_DIR}/logs ${DRA_APPS_DIR}/output ${DRA_CORE_DIR}/.hypothesis
 clean_doc_dirs  := ${site_dir} ${docs_dir}/.sass-cache
 clean_dirs      := ${clean_code_dirs} ${clean_doc_dirs}
 
@@ -272,8 +272,8 @@ before-app-run:: app-check setup-output-dir install-core
 
 # Note that OUTPUT_DIR is defined relative to DRA_APPS_DIR, but we are currently not in DRA_APPS_DIR
 setup-output-dir::
-	@test ! -d "${DRA_APPS_DIR}/${OUTPUT_DIR}" || (mv "${DRA_APPS_DIR}/${OUTPUT_DIR}" "${DRA_APPS_DIR}/${OUTPUT_DIR}"-save-${TIMESTAMP} && echo "*** Moved old "${DRA_APPS_DIR}/${OUTPUT_DIR}" to "${DRA_APPS_DIR}/${OUTPUT_DIR}"-save-${TIMESTAMP} ***")
 	mkdir -p "${DRA_APPS_DIR}/${OUTPUT_DIR}"
+	mkdir -p "${DRA_APPS_DIR}/${LOG_DIR}"
 	@echo
 after-app-run:: show-output-files
 
