@@ -287,7 +287,7 @@ do-app-run-finance::
 		--max-cost-dollars ${MAX_COST_DOLLARS} \
 		--max-time-minutes ${MAX_TIME_MINUTES} \
 		--verbose ${APP_ARGS} && \
-		echo "Output files in ${OUTPUT_DIR}:" && \
+		echo "Output files in ${DRA_APPS_DIR}/${OUTPUT_DIR}:" && \
 		ls -l ${OUTPUT_DIR}
 
 # Application-specific run commands:
@@ -310,7 +310,7 @@ do-app-run-medical::
 		--max-cost-dollars ${MAX_COST_DOLLARS} \
 		--max-time-minutes ${MAX_TIME_MINUTES} \
 		--verbose ${APP_ARGS} && \
-		echo "Output files in ${OUTPUT_DIR}:" && \
+		echo "Output files in ${DRA_APPS_DIR}/${OUTPUT_DIR}:" && \
 		ls -l ${OUTPUT_DIR}
 		
 do-app-run-arxiv::
@@ -331,7 +331,7 @@ do-app-run-arxiv::
 		--max-cost-dollars ${MAX_COST_DOLLARS} \
 		--max-time-minutes ${MAX_TIME_MINUTES} \
 		--verbose ${APP_ARGS} && \
-		echo "Output files in ${OUTPUT_DIR}:" && \
+		echo "Output files in ${DRA_APPS_DIR}/${OUTPUT_DIR}:" && \
 		ls -l ${OUTPUT_DIR}
 
 .PHONY: app-setup uv-cmd-check venv-setup venv-core-setup venv-apps-setup
