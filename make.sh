@@ -9,12 +9,10 @@
 : ${OPENAI_RESEARCH_MODEL:="gpt-4o"}
 : ${OPENAI_EXCEL_WRITER_MODEL:="o4-mini"}
 : ${OLLAMA_RESEARCH_MODEL:="gpt-oss:20b"}
-: ${OLLAMA_QWEN_RESEARCH_MODEL:="qwen3.5:35b"}
 # When running with Ollama, there is less need to run a low-cost model 
 # for the Excel spreadsheet generation task, and keeping the same model
 # in memory saves time.
 : ${OLLAMA_EXCEL_WRITER_MODEL:="$OLLAMA_RESEARCH_MODEL"}
-: ${OLLAMA_QWEN_EXCEL_WRITER_MODEL:="$OLLAMA_QWEN_RESEARCH_MODEL"}
 
 help() {
 	cat <<EOF
@@ -32,7 +30,7 @@ For the finance app: These flags are ignored if not running the finance app.
 --meta            Research on Meta
 
 For the medical and arxiv app:
---query  "QUERY"  Use this query (ignored if not running the medical app)
+--query  "QUERY"  Use this query (ignored if running the finance app)
 --title  "TITLE"  Report title
 --report-title "TITLE"  
                   Same as "--title TITLE".
@@ -40,21 +38,21 @@ For the medical and arxiv app:
 --categories "CATEGORIES"
                   The categories to focus on. (Only for the arxiv app)
 
+Inference server provider:
 --openai          Use OpenAI models for inference:
                     Orchestration:    $OPENAI_RESEARCH_MODEL
                     Excel report gen: $OPENAI_EXCEL_WRITER_MODEL
 --ollama          Use Ollama models for inference:
                     Orchestration:    $OLLAMA_RESEARCH_MODEL
                     Excel report gen: $OLLAMA_EXCEL_WRITER_MODEL
---qwen            Use Ollama-served Qwen models for inference:
-                    Orchestration:    $OLLAMA_QWEN_RESEARCH_MODEL
-                    Excel report gen: $OLLAMA_QWEN_EXCEL_WRITER_MODEL
+
+Other flags:
 --short | --short-run
                   Do a short run (low "max values" for testing)
 --noop            Just print the command that will be executed, but don't run it.
 
-All other arguments passed to make. So for example, to see what command make will
-run without running it, pass "-n".
+All other arguments are passed to make. So for example, to see what command make
+will run without actually running it, pass "-n".
 EOF
 }
 
@@ -116,18 +114,21 @@ do
 		vars+=(
 			TICKER="AAPL" 
 			COMPANY_NAME="Apple Inc."
+			REPORT_TITLE="Apple Financials"
 		)
 		;;
 	--ibm)
 		vars+=(
 			TICKER="IBM" 
 			COMPANY_NAME="International Business Machines Corporation"
+			REPORT_TITLE="IBM Financials"
 		)
 		;;
 	--meta)
 		vars+=(
 			TICKER="META" 
 			COMPANY_NAME="Meta Platforms, Inc."
+			REPORT_TITLE="Meta Financials"
 		)
 		;;
 	--query)
@@ -139,7 +140,7 @@ do
 	--title|--report-title)
 		shift
 		vars+=(
-			REPORT_TITLE="$1" 
+			REPORT_TITLE="$1"
 		)
 		;;
 	--terms)
@@ -158,13 +159,6 @@ do
 		vars+=(
 			RESEARCH_MODEL="$OLLAMA_RESEARCH_MODEL"
 			EXCEL_WRITER_MODEL="$OLLAMA_EXCEL_WRITER_MODEL"
-			INFERENCE_PROVIDER="ollama"
-		)
-		;;
-	--qwen)
-		vars+=(
-			RESEARCH_MODEL="$OLLAMA_QWEN_RESEARCH_MODEL"
-			EXCEL_WRITER_MODEL="$OLLAMA_QWEN_EXCEL_WRITER_MODEL"
 			INFERENCE_PROVIDER="ollama"
 		)
 		;;

@@ -302,7 +302,7 @@ class RichDisplay(Display[DeepResearch]):
     def _after_set_system(self):
         if self.system and self.system.logger:
             self.logger = self.system.logger
-            self.logger.info("RichDisplay._after_set_system() (self.system not None)")
+
         if self.system and self.system.orchestrator:
             self.orchestrator = self.system.orchestrator
             self.monitor = RichDeepOrchestratorMonitor(self.system.orchestrator)

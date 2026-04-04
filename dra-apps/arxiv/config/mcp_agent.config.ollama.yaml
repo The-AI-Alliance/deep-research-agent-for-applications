@@ -35,9 +35,9 @@ mcp:
 # Change the default model if you prefer to use another one.
 # Model notes: in our experiments, the following models performed 
 # best to "less effective":
-#  1. qwen3.5:35b worked well
+#  1. qwen3.5:35b worked well.
 #  2. qwen3.5:27b did not do a good job synthesizing the results 
-#     into a report
+#     into a report.
 #  3. gpt-oss:20b generally works well, but sometimes seems to 
 #     get "lost" in an infinite loop.
 openai:
