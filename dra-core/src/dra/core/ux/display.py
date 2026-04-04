@@ -1,4 +1,4 @@
-from typing import Callable, TypeVar
+from typing import Awaitable, TypeVar
 
 from dra.core.common.observer  import Observer
 
@@ -9,6 +9,6 @@ class Display(Observer[SYSTEM]):
         super().__init__(disallow_system_change=disallow_system_change)
         self.title = title        
 
-    async def run_live(self, function: Callable[[], None]):
+    async def run_live(self, function: Awaitable[None]) -> None:
         """Some displays need to wrap the main system logic, but this should only be done by ONE display."""
         pass

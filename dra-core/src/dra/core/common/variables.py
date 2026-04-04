@@ -2,68 +2,76 @@ from __future__ import annotations
 from collections.abc import Sequence
 from enum import Enum
 from pathlib import Path
-from typing import Callable
-
+from typing import Any, Callable, Generic, Optional, TypeVar
 
 class VariableFormat(Enum):
     MARKDOWN = 0
     PLAIN = 1
 
 class Variable():
+    no_format = "NO_FORMAT"
+
     def __init__(self,
-        key: str, 
-        value: any,
-        label: str = None, 
-        kind: str = 'str'):
+        key:   str, 
+        value: Any,
+        label: Optional[str] = None, 
+        kind:  str = 'str'):
         """
         If `label` is `None`, then `make_label(key)` is called to create one.
-        If `kind` is `None`, then `format()` will return `None`. Specify
-        `None` explicitly for cases where a variable shouldn't be rendered,
+        (We allow `label` to be ''.')
+        If `kind` is `Variable.no_format`, then `format()` will return `(key, label, None)`. 
+        Specify `None` explicitly for cases where a variable shouldn't be rendered,
         e.g., when verbose output is off.
         """
         self.key = key
         self.value = value
         # Note that we are careful to allow '' for a label.
         self.label = label if label != None else Variable.make_label(key) 
-        self.kind = kind
+        self.kind  = kind
 
     def __repr__(self) -> str:
-        fmt_str = '...' if self.kind else None
-        return f"Variable(key = {self.key}, value = {self.value}, label = {self.label}, kind = {fmt_str})"
+        return f"Variable(key = {self.key}, value = {self.value}, label = {self.label}, kind = {self.kind})"
 
-    @staticmethod
-    def get(variable: Variable, default: any) -> any:
-        """Return the variables value or default if the variable is None or the value is None."""
+    V = TypeVar("V")
+
+    @classmethod
+    def get_value(cls, variable: Optional[Variable], default: V) -> V:
+        """
+        Get the value for an optional variable. It is optional in case the 
+        variable is retrieved from a dictionary and may not exist. If the 
+        variable is `None` or its value evaluates to `False`, return the 
+        input `default` value.
+        """
         if variable and variable.value:
             return variable.value
         else:
             return default
 
-    def format(self, variable_format: VariableFormat = VariableFormat.PLAIN) -> (str, str, str):
+    def format(self, variable_format: VariableFormat = VariableFormat.PLAIN) -> tuple[str, str, Optional[str]]:
         """
-        If `self.kind` is not `None`, then return `(key, label, formatted_value)`.
-        Otherwise return `None`. 
+        If `self.kind` is not `Variable.no_format`, then return `(key, label, formatted_value)`.
+        Otherwise return `(key, label, None)`. 
         By default, the "plain" format is used, i.e., `str(value)` for most values. 
         Pass `variable_format = VariableFormat.MARKDOWN` for markdown formatting, e.g.,
         a 'url' is returned `[key](value)`, for 'file' it is `[value](file://value)`. 
         """
-        if not self.kind:
-            return None
-        
-        formatter_map = None
-        match variable_format:
-            case VariableFormat.PLAIN:
-                formatter_map = Variable.plain_formats
-            case VariableFormat.MARKDOWN:
-                formatter_map = Variable.markdown_formats
-            case _:
-                raise ValueError(f"Invalid variable_format value: {variable_format}")
-        
-        formatter = formatter_map.get(self.kind)
-        if not formatter:
-            raise ValueError(f"Unrecognized kind specified: {self.kind}")
+        formatted_str: str | None = None
+        if self.kind != Variable.no_format:
+            formatter_map = None
+            match variable_format:
+                case VariableFormat.PLAIN:
+                    formatter_map = Variable.plain_formats
+                case VariableFormat.MARKDOWN:
+                    formatter_map = Variable.markdown_formats
+                case _:
+                    raise ValueError(f"Invalid or unsupported 'variable_format' value: '{variable_format}'")
+            
+            formatter = formatter_map.get(self.kind)
+            if not formatter:
+                raise ValueError(f"Unrecognized kind specified: '{self.kind}'")
+            formatted_str = formatter(self)
 
-        return (self.key, self.label, formatter(self))
+        return (self.key, self.label, formatted_str)
 
     # Class utilities:
 
@@ -71,17 +79,17 @@ class Variable():
         """Replace '_' with ' ', capitalize words and strip whitespace on the ends."""
         return s.replace('_', ' ').title().strip()
 
-    def make_formatted(variables: Sequence[Variable], variable_format: VariableFormat = VariableFormat.PLAIN) -> list[(str,str,str)]:
+    def make_formatted(variables: Sequence[Variable], variable_format: VariableFormat = VariableFormat.PLAIN) -> list[tuple[str,str,str]]:
         """
         A helper method for common uses of Variables; return a list of
-        `(key, label, formatted(value))` pairs from the input sequence of
-        Variables, filtering out any were `variable.format() == `None`.
+        `(key, label, formatted_value)` pairs from the input sequence of
+        Variables, filtering out any were `formatted_value == `None`.
         The `variable_format` argument is passed to `format()`.
         """
         result = []
         for variable in variables:
             tuple = variable.format(variable_format=variable_format)
-            if tuple:
+            if tuple[2] != None:  # Empty string allowed!
                 result.append(tuple)
         return result
 
@@ -90,13 +98,8 @@ class Variable():
         'anthropic': 'Anthropic',
         'ollama':    'Ollama',
     }
+    unknown_provider = 'Unknown!'
 
-    def get_value(variable: Variable, default: any = None) -> any | None:
-        if variable:
-            return variable.value if variable.value else default
-        else:
-            return default
-    
     markdown_formats: dict[str, Callable[[Variable],str]] = {
         'str':            lambda v: str(v.value),
         'url':            lambda v: f"[{v.label}]({v.value})" if v.value else "None",
@@ -105,7 +108,7 @@ class Variable():
         'code_multiline': lambda v: f"```\n{v.value}\n```",
         'dict':           lambda v: '\n'.join([f"`{key}`: {value}" for key,value in v.value.items()]) if v.value else "None",
         'callout':        lambda v: '\n'.join([f"> {line}" for line in str(v.value).split('\n')]) if v.value else "None",
-        'provider':       lambda v: Variable.provider_names.get(v.value),
+        'provider':       lambda v: Variable.provider_names.get(v.value, Variable.unknown_provider),
     }
     plain_formats: dict[str, Callable[[Variable],str]] = {
         'str':            lambda v: str(v.value),
@@ -115,6 +118,6 @@ class Variable():
         'code_multiline': lambda v: str(v.value),
         'dict':           lambda v: '\n'.join([f"{key}: {value}" for key,value in v.value.items()]) if v.value else "None",
         'callout':        lambda v: str(v.value),
-        'provider':       lambda v: Variable.provider_names.get(v.value),
+        'provider':       lambda v: Variable.provider_names.get(v.value, Variable.unknown_provider),
     }
 

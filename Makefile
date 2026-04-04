@@ -11,7 +11,7 @@ MAKEFLAGS           ?= # -w --warn-undefined-variables
 MAKEFLAGS_RECURSIVE ?= # --print-directory (only useful for recursive makes...)
 UNAME               ?= $(shell uname)
 ARCHITECTURE        ?= $(shell uname -m)
-TIMESTAMP           ?=$(shell date "+%Y-%m-%d_%H-%M-%S")
+TIMESTAMP           ?= $(shell date "+%Y-%m-%d_%H-%M-%S")
 
 ## App defaults
 # Call make 
@@ -58,27 +58,28 @@ MEDICAL_RESEARCH_PROMPT_FILE ?= medical_research_agent.md
 ARXIV_RESEARCH_PROMPT_FILE   ?= arxiv_research_agent.md
 
 # For all apps:
+LOG_DIR                      ?= logs/${APP}
 
 # Relative directory paths are relative to ${DRA_APPS_DIR}:
 ifeq (finance,${APP})
-	OUTPUT_DIR              ?= output/${APP}/${TICKER}
+	OUTPUT_DIR_BASE         ?= output/${APP}/${TICKER}/
 	OUTPUT_REPORT           ?= ${TICKER}_report.md
 	REPORT_TITLE            ?= ${TICKER} Report
 else ifeq (medical,${APP})
-	OUTPUT_DIR              ?= output/${APP}
+	OUTPUT_DIR_BASE         ?= output/${APP}/
 	# Instead of defining a default here, use the user-supplied title
 	# to create the report name.
 	# OUTPUT_REPORT           ?= medical-report.md
 else ifeq (arxiv,${APP})
-	OUTPUT_DIR              ?= output/${APP}
+	OUTPUT_DIR_BASE         ?= output/${APP}/
 	# Instead of defining a default here, use the user-supplied title
 	# to create the report name.
 	# OUTPUT_REPORT           ?= arxiv-report.md
 else
-	OUTPUT_DIR              ?= output/${APP}/${TIMESTAMP}
-	OUTPUT_REPORT           ?= report.md
+    $(error "Unknown value for APP: ${APP}")
 endif
 
+OUTPUT_DIR                 ?= ${OUTPUT_DIR_BASE}/${TIMESTAMP}
 REL_APP_PATH               ?= ${APP}/main.py
 APP_MODULE                 ?= ${APP}.main
 RESEARCH_MODEL             ?= gpt-4o
@@ -94,7 +95,7 @@ endif
 TEMPERATURE                ?= 0.7
 MAX_ITERATIONS             ?= 25
 
-clean_code_dirs := logs ${DRA_APPS_DIR}/output ${DRA_CORE_DIR}/.hypothesis
+clean_code_dirs := ${DRA_APPS_DIR}/logs ${DRA_APPS_DIR}/output ${DRA_CORE_DIR}/.hypothesis
 clean_doc_dirs  := ${site_dir} ${docs_dir}/.sass-cache
 clean_dirs      := ${clean_code_dirs} ${clean_doc_dirs}
 
@@ -116,7 +117,6 @@ Targets for the application:
 
 make all                # Run the ${APP} application by building "app-run".
 make all-apps           # Run all the applications: ${APPS}.
-make all-apps-help      # Show help for all the apps: ${APPS}.
 make app-run            # Run the ${APP} application with default arguments.
 make app-run-<foo>      # Run the "<foo>" application with default arguments (or prompting for values).
 make app-help           # Run the ${APP} application with --help to see the support arguments.
@@ -127,18 +127,19 @@ make test               # Run the automated tests. ("make tests" is a synonym...
 make build              # Build distributions of the DRA "core" and apps.
 make build-core         # Build a distribution of the DRA "core".
 make build-apps         # Build a distribution of the applications.
-make install            # Install the the DRA "core" and apps locally in development mode.
-make install-core       # Install a distribution of the DRA "core".
-make install-apps       # Install a distribution of the applications.
+make install-core       # Install dra-core into dra-apps, for running locally, etc.
+make type-check         # Run the "ty" type checker on the code.
+make type-check-core    # Run the "ty" type checker on the "core" code.
+make type-check-apps    # Run the "ty" type checker on the applications code.
 
 Targets for the GitHub pages documentation:
 
 make view-pages         # View the published GitHub pages in a browser.
-make view-local         # View the pages locally. Makes 'setup-jekyll' and 'run-jekyll'.
+make view-local         # View the pages locally. Makes 'jekyll-setup' and 'run-jekyll'.
                         # Tip: "JEKYLL_PORT=8000 make view-local" uses port 8000 instead of 4000.
 make run-jekyll         # Used by "view-local"; assumes everything is already setup.
                         # Tip: "JEKYLL_PORT=8000 make run-jekyll" uses port 8000 instead of 4000.
-make setup-jekyll       # Install Jekyll. Ruby 3.X must be installed already. 
+make jekyll-setup       # Install Jekyll. Ruby 3.X must be installed already. 
                         # Only needed once for local viewing of the document.
 
 Miscellaneous make targets for help, debugging, etc.:
@@ -148,8 +149,8 @@ make print-info         # Print all the current default values of some make and 
 make print-info-<foo>   # Print just the values related to the app "<foo>".
 make print-make-info    # Print just the values related to make, etc.
 make print-docs-info    # Print just the values related to the GitHub Pages docs.
-make clean_code         # Deletes these directories: ${clean_code_dirs}
-make clean_docs         # Deletes these directories: ${clean_docs_dirs}
+make clean-code         # Deletes these directories: ${clean_code_dirs}
+make clean-docs         # Deletes these directories: ${clean_docs_dirs}
 make clean              # Deletes these directories: ${clean_dirs}
 endef
 
@@ -200,7 +201,7 @@ ERROR: Did the bundle command fail with a message like this?
 ERROR: 	 "/usr/local/opt/ruby/bin/bundle:25:in `load': cannot load such file -- /usr/local/lib/ruby/gems/3.1.0/gems/bundler-X.Y.Z/exe/bundle (LoadError)"
 ERROR: Check that the /usr/local/lib/ruby/gems/3.1.0/gems/bundler-X.Y.Z directory actually exists. 
 ERROR: If not, try running the clean-jekyll command first:
-ERROR:   make clean-jekyll setup-jekyll
+ERROR:   make clean-jekyll jekyll-setup
 ERROR: Answer "y" (yes) to the prompts and ignore any warnings that you can't uninstall a "default" gem.
 
 endef
@@ -214,16 +215,37 @@ endef
 # Because of "colliding" variable definitions, if more than one app is run,
 # make is invoked separately for each app.
 
-.PHONY: all list-apps app-setup
-.PHONY: setup-jekyll run-jekyll view-pages view-local clean clean_code clean_docs help
-.PHONY: all-apps all-apps-help app-run do-app-run-${APP} before-app-run app-check setup-output-dir after-app-run
-
-.PHONY: uv-check uv-cmd-check venv-check mcp-agent-check 
-.PHONY: print-info print-info-app print-make-info print-docs-info show-output-files
-
+.PHONY: all list-apps 
 all list-apps::
 	@echo "Available Apps: ${APPS}"
 	@echo "To run a particular app 'foo', use 'make run-app-foo'. See also 'make app-help'."
+
+.PHONY: test tests test-dra-core
+
+test tests test-dra-core::
+	@echo "Running dra-core tests..."
+	cd ${DRA_CORE_DIR} && uv run python -m unittest discover ${VERBOSE}
+
+.PHONY: type-check type-check-core type-check-apps
+.PHONY: type-check-watch type-check-core-watch type-check-apps-watch
+
+type-check:: type-check-core type-check-apps
+type-check-watch:: type-check-core-watch type-check-apps-watch
+
+type-check-core::
+	@echo "Running 'ty' on dra-core."
+	cd ${DRA_CORE_DIR} && uvx ty check
+type-check-core-watch::
+	@echo "Running 'ty' on dra-core in 'watch' mode."
+	cd ${DRA_CORE_DIR} && uvx ty check --watch
+type-check-apps:: install-core
+	@echo "Running 'ty' on dra-apps."
+	cd ${DRA_APPS_DIR} && uvx ty check
+type-check-apps-watch:: install-core
+	@echo "Running 'ty' on dra-apps in 'watch' mode."
+	cd ${DRA_APPS_DIR} && uvx ty check --watch
+
+.PHONY: all-apps app-run before-app-run do-app-run-${APP} after-app-run
 
 apps_run := ${APPS:%=app-run-%}
 ${apps_run}::
@@ -233,21 +255,12 @@ apps_help := ${APPS:%=app-help-%}
 ${apps_help}::
 	${MAKE} APP=${@:app-help-%=%} app-help
 
-.PHONY: test tests test-dra-core
-
-test tests test-dra-core::
-	@echo "Running dra-core tests..."
-	cd ${DRA_CORE_DIR} && uv run python -m unittest discover
-
 app-run:: before-app-run do-app-run-${APP} after-app-run
-before-app-run:: app-check setup-output-dir
 
-# Note that OUTPUT_DIR is defined relative to DRA_APPS_DIR, but we are currently not in DRA_APPS_DIR
-setup-output-dir::
-	@test ! -d "${DRA_APPS_DIR}/${OUTPUT_DIR}" || (mv "${DRA_APPS_DIR}/${OUTPUT_DIR}" "${DRA_APPS_DIR}/${OUTPUT_DIR}"-save-${TIMESTAMP} && echo "*** Moved old "${DRA_APPS_DIR}/${OUTPUT_DIR}" to "${DRA_APPS_DIR}/${OUTPUT_DIR}"-save-${TIMESTAMP} ***")
-	mkdir -p "${DRA_APPS_DIR}/${OUTPUT_DIR}"
-	@echo
-after-app-run:: show-output-files
+before-app-run:: app-setup output-dir-setup install-core
+
+after-app-run:: 
+	@echo "All output files for all runs of ${APP} are in ${DRA_APPS_DIR}/${OUTPUT_DIR_BASE}."
 
 # Application-specific run commands:
 
@@ -273,8 +286,12 @@ do-app-run-finance::
 		--max-tokens ${MAX_TOKENS} \
 		--max-cost-dollars ${MAX_COST_DOLLARS} \
 		--max-time-minutes ${MAX_TIME_MINUTES} \
-		--verbose ${APP_ARGS}
-		
+		--verbose ${APP_ARGS} && \
+		echo "Output files in ${DRA_APPS_DIR}/${OUTPUT_DIR}:" && \
+		ls -l ${OUTPUT_DIR}
+
+# Application-specific run commands:
+
 do-app-run-medical::
 	cd ${DRA_APPS_DIR} && uv run -m ${APP_MODULE} \
 		--query "${QUERY}" \
@@ -292,7 +309,9 @@ do-app-run-medical::
 		--max-tokens ${MAX_TOKENS} \
 		--max-cost-dollars ${MAX_COST_DOLLARS} \
 		--max-time-minutes ${MAX_TIME_MINUTES} \
-		--verbose ${APP_ARGS}
+		--verbose ${APP_ARGS} && \
+		echo "Output files in ${DRA_APPS_DIR}/${OUTPUT_DIR}:" && \
+		ls -l ${OUTPUT_DIR}
 		
 do-app-run-arxiv::
 	cd ${DRA_APPS_DIR} && uv run -m ${APP_MODULE} \
@@ -311,51 +330,57 @@ do-app-run-arxiv::
 		--max-tokens ${MAX_TOKENS} \
 		--max-cost-dollars ${MAX_COST_DOLLARS} \
 		--max-time-minutes ${MAX_TIME_MINUTES} \
-		--verbose ${APP_ARGS}
-		
-show-output-files::
-	@echo
-	@echo "Output files in ${DRA_APPS_DIR}/${OUTPUT_DIR}:"
-	@cd "${DRA_APPS_DIR}/${OUTPUT_DIR}" && find . -type f -exec ls -lh {} \;
+		--verbose ${APP_ARGS} && \
+		echo "Output files in ${DRA_APPS_DIR}/${OUTPUT_DIR}:" && \
+		ls -l ${OUTPUT_DIR}
 
-# Build targets
-.PHONY: build build-apps build-core
+.PHONY: app-setup uv-cmd-check venv-setup venv-core-setup venv-apps-setup
 
-build:: build-core build-apps
-build-core::
-	@echo "Building dra-core package in ${DRA_CORE_DIR}..."
-	cd ${DRA_CORE_DIR} && uv build && echo "Contents of ${DRA_CORE_DIR}/dist:" && ls -l dist
-build-apps::
-	@echo "Building dra-apps package in ${DRA_APPS_DIR}..."
-	cd ${DRA_APPS_DIR} && uv build && echo "Contents of ${DRA_APPS_DIR}/dist:" && ls -l dist
+app-setup:: uv-cmd-check venv-setup 
 
-.PHONY: install install-apps install-core 
-
-install:: install-core install-apps
-install-core::
-	@echo "Installing dra-core package from ${DRA_CORE_DIR} in development mode..."
-	cd ${DRA_CORE_DIR} && uv sync
-install-apps::
-	@echo "Installing dra-apps package from ${DRA_APPS_DIR} in development mode..."
-	cd ${DRA_APPS_DIR} && uv sync
-
-app-check:: uv-check mcp-agent-check
-
-uv-check:: uv-cmd-check venv-check
 uv-cmd-check::
 	@command -v uv > /dev/null || ( echo ${missing_uv_message} && exit 1 )
-venv-check::
-	[[ -d ${DRA_CORE_DIR}/.venv ]] || (cd ${DRA_CORE_DIR} && uv venv)
-	[[ -d ${DRA_APPS_DIR}/../.venv ]] || (cd apps && uv venv)
-
-mcp-agent-check::
+venv-setup:: venv-core-setup venv-apps-setup
+venv-core-setup::
+	@cd ${DRA_CORE_DIR} && [[ -d .venv ]] || uv venv; uv sync
 	@cd ${DRA_CORE_DIR} && uv pip freeze | grep mcp-agent > /dev/null || ( echo ${missing_mcp_agent_message} && exit 1 )
+venv-apps-setup::
+	@cd ${DRA_APPS_DIR} && [[ -d .venv ]] || uv venv; uv sync
 
-app-setup:: uv-check venv-check install-dra-core
-	@echo "Installing apps dependencies..."
-	cd apps && uv sync
+.PHONY: install-core
+install-core::
+	cd ${DRA_APPS_DIR} && uv pip install -U ../${DRA_CORE_DIR}
 
-.PHONY: app-help app-run-help app-help-header app-help-footer
+# Note that OUTPUT_DIR is defined relative to DRA_APPS_DIR, but we are currently not in DRA_APPS_DIR
+.PHONY: output-dir-setup 
+output-dir-setup::
+	mkdir -p "${DRA_APPS_DIR}/${OUTPUT_DIR}"
+	mkdir -p "${DRA_APPS_DIR}/${LOG_DIR}"
+	@echo
+
+# Build targets
+.PHONY: build build-apps build-core build-clean build-apps-clean build-core-clean
+
+build:: build-core build-apps
+build-clean: build-core-clean build-apps-clean
+
+build-core:: build-core-clean
+	@echo "Building dra-core package in ${DRA_CORE_DIR}..."
+	cd ${DRA_CORE_DIR} && uv build && echo "Contents of ${DRA_CORE_DIR}/dist:" && ls -l dist
+build-core-clean::
+	rm -rf ${DRA_CORE_DIR}/dist
+	rm -rf ${DRA_CORE_DIR}/build
+	rm -rf ${DRA_CORE_DIR}/.venv/lib/python3.12/site-packages/dra*
+
+build-apps:: build-apps-clean app-setup
+	@echo "Building dra-apps package in ${DRA_APPS_DIR}..."
+	cd ${DRA_APPS_DIR} && uv build && echo "Contents of ${DRA_APPS_DIR}/dist:" && ls -l dist
+build-apps-clean::
+	rm -rf ${DRA_APPS_DIR}/dist
+	rm -rf ${DRA_APPS_DIR}/build
+	rm -rf ${DRA_APPS_DIR}/.venv/lib/python3.12/site-packages/dra*
+
+.PHONY: help app-help app-run-help app-help-header app-help-footer
 
 app-help app-run-help:: app-help-header app-help-footer
 app-help-header::
@@ -371,6 +396,8 @@ help::
 	@echo
 	@echo "Run make app-help for more help on running the app."
 	@echo
+
+.PHONY: print-info print-info-app print-make-info print-docs-info 
 
 print-info: print-info-app print-make-info print-docs-info
 ${APPS:%=print-info-app-%}:
@@ -422,7 +449,7 @@ print-make-info:
 	@echo "ARCHITECTURE:                '${ARCHITECTURE}'"
 	@echo "GIT_HASH:                    '${GIT_HASH}'"
 	@echo "NOW:                         '${NOW}'"
-	@echo "clean code directories:      '${clean_code_dirs}' (deleted by 'make clean_code')"
+	@echo "clean code directories:      '${clean_code_dirs}' (deleted by 'make clean-code')"
 	@echo "clean docs directories:      '${clean_docs_dirs}' (deleted by 'make clean_docs')"
 	@echo "clean directories:           '${clean_dirs}' (deleted by 'make clean')"
 	@echo
@@ -435,22 +462,24 @@ print-docs-info:
 	@echo
 
 
-clean_code:: clean_code clean_docs
-clean_code::
+clean:: clean-code clean-docs build-clean
+clean-code::
 	rm -rf ${clean_code_dirs} 
-clean_docs::
+clean-docs::
 	rm -rf ${clean_docs_dirs} 
 
 
 ## The rest of this Makefile is for running the GitHub Pages documentation 
 ## website locally for testing and proofreading.
 
+.PHONY: view-pages view-local jekyll-setup run-jekyll 
+
 view-pages::
 	@uname | grep -q Darwin && open ${pages_url} || \
 		(echo "I could not open the GitHub Pages URL myself. Try ⌘-click or ^-click on this URL, or copy and paste it into a browser:" && \
 		echo "  ${pages_url}")
 
-view-local:: setup-jekyll run-jekyll
+view-local:: jekyll-setup run-jekyll
 
 # Passing --baseurl '' allows us to use `localhost:4000` rather than require
 # `localhost:4000/The-AI-Alliance/REPO_NAME` when running locally.
@@ -462,7 +491,7 @@ run-jekyll: clean
 		bundle exec jekyll serve --port ${JEKYLL_PORT} --baseurl '' --incremental || \
 		${MAKE} jekyll-error
 
-setup-jekyll:: ruby-installed-check ruby-gem-installation bundle-command-check bundle-installation
+jekyll-setup:: ruby-installed-check ruby-gem-installation bundle-command-check bundle-installation
 
 .PHONY: ruby-installed-check ruby-gem-installation bundle-command-check bundle-installation
 .PHONY: jekyll-error ruby-missing-error gem-missing-error gem-error bundle-error bundle-missing-error
@@ -488,7 +517,7 @@ bundle-command-check:
 # invoked, independent of the shell script logic. Hence, the only way to make
 # this invocation conditional is to use a make target invocation, as shown above.
 jekyll-error:
-	$(error "ERROR: Failed to run Jekyll. Try running 'make setup-jekyll'.")
+	$(error "ERROR: Failed to run Jekyll. Try running 'make jekyll-setup'.")
 ruby-missing-error:
 	$(error "ERROR: 'ruby' is required. ${ruby_installation_message}")
 gem-missing-error:

@@ -29,54 +29,36 @@ class TestPathUtils(unittest.TestCase):
 
     @given(parent_path_text(), no_leading_dots())
     def test_resolve_path_adds_missing_parents_directory(self, parents: str, file: str):
-        actual = resolve_path(file, parents, return_abs_path=False)
+        actual = resolve_path(file, Path(parents), return_abs_path=False)
         expected = Path(os.path.join(parents, file))
         self.assertEqual(expected, actual)
 
     @given(parent_path_text(), no_leading_dots())
     def test_resolve_path_does_not_add_parents_directory_if_it_already_has_parents(self, parents: str, file: str):
         file = f"{parents}/{file}"
-        actual = resolve_path(file, parents, return_abs_path=False)
+        actual = resolve_path(file, Path(parents), return_abs_path=False)
         expected = Path(file)
         self.assertEqual(expected, actual, f"file: {file}, actual: {actual}, expected: {expected}")
 
     def test_resolve_path_returns_absolute_path_by_default(self):
         file = "README.md"
         parent = Path("..")  # relative to to the "src" directory!
-        actual = resolve_path(file, parent)
+        actual = resolve_path(file, Path(parent))
         expected = Path(parent / file).resolve()
         self.assertEqual(expected, actual, f"file: {file}, actual: {actual}, expected: {expected}")
-
-    def test_resolve_and_require_path_adds_missing_parents_directory(self):
-        cwd = os.path.dirname(os.path.realpath(__file__))
-        actual = resolve_and_require_path(f"{file}_missing", parents, raise_on_missing=False)
-        self.assertEqual(None, actual)
-
-    @given(parent_path_text(), no_leading_dots())
-    def test_resolve_and_require_path_does_not_add_parents_directory_if_it_already_has_parents(self, parents: str, file: str):
-        file = f"{parents}/{file}_missing"
-        actual = resolve_and_require_path(file, parents, raise_on_missing=False, return_abs_path=False)
-        expected = None
-        self.assertEqual(expected, actual)
-
-    @given(parent_path_text(), no_leading_dots())
-    def test_resolve_and_require_path_adds_missing_parents_directory(self, parents: str, file: str):
-        actual = resolve_and_require_path(f"{file}_missing", parents, raise_on_missing=False, return_abs_path=False)
-        self.assertEqual(None, actual)
-
-    @given(parent_path_text(), no_slash_nonempty_text())
-    def test_resolve_and_require_path_does_not_add_parents_directory_if_it_already_has_parents(self, parents: str, file: str):
-        file = f"{parents}/{file}_missing"
-        actual = resolve_and_require_path(file, parents, raise_on_missing=False, return_abs_path=False)
-        expected = None
-        self.assertEqual(expected, actual)
 
     def test_resolve_and_require_path_returns_absolute_path_by_default(self):
         file = "README.md"
         parent = Path("..")  # relative to to the "src" directory!
-        actual = resolve_and_require_path(file, parent, raise_on_missing=True)
+        actual = resolve_and_require_path(file, parent)
         expected = Path(parent / file).resolve()
         self.assertEqual(expected, actual, f"file: {file}, actual: {actual}, expected: {expected}")
+
+    @given(parent_path_text(), no_leading_dots())
+    def test_resolve_and_require_path_raises_for_nonexistent_path(self, parents: str, file: str):
+        file = f"{parents}/{file}"
+        with self.assertRaises(ValueError):
+            actual = resolve_and_require_path(file, Path(parents))
 
 if __name__ == "__main__":
     unittest.main()

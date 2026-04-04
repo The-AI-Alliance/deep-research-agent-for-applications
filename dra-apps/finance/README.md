@@ -50,8 +50,14 @@ See [`examples/gpt-oss_20b/META*`](https://github.com/The-AI-Alliance/deep-resea
 
 ## Notes on This Application
 
+### The Excel Spreadsheet Task
+
 We have discovered that the Excel spreadsheet task will not write the file if a relative output path is provided. By default, the `Makefile` uses a relative path for `OUTPUT_DIR`, which is passed to the application, but `resolve_path()` in the [`paths.py`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-core/src/dra/core/common/utils/paths.py) utilities is used to convert the relative paths to absolute paths, as required.
 
-## Customizing Data Sources for Finance Deep Research
+### The Default Ollama Model
+
+Note the `default_model` used in [`mcp_agent.config.ollama.yaml`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-apps/finance/config/mcp_agent.config.ollama.yaml). For each application, we specify the model that worked best for us in our experiments. Of course, your experiences may be different.
+
+### Customizing Data Sources for Finance Deep Research
 
 Much of the important finance information is behind paywalls. As an open-source demo application, we can only use freely-accessible data sources. If you have accounts to sources behind paywalls, you can add them to the application following the instructions in the main [README](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/README.md). 

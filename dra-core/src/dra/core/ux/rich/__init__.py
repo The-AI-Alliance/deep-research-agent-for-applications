@@ -11,7 +11,8 @@ import re
 import sys
 import time
 from datetime import datetime
-from typing import Callable
+from logging import Logger
+from typing import Any, Awaitable
 
 from rich.console import Console
 from rich.table import Table
@@ -276,7 +277,7 @@ class RichDeepOrchestratorMonitor():
         return Panel("\n".join(lines), title="📊 Status", border_style="green")
 
 
-class RichDisplay(Display):
+class RichDisplay(Display[DeepResearch]):
     """
     The Rich Display.
     To keep the logic as simple and bug free as possible, we only allow the DeepResearch instance
@@ -285,10 +286,12 @@ class RichDisplay(Display):
     """
     def __init__(self, title: str):
         super().__init__(title, disallow_system_change=True)
-        self.orchestrator: DeepOrchestrator = None
-        self.monitor: RichDeepOrchestratorMonitor = None
-        self.console: Console = None
-        self.layout: Layout = None
+        
+        # Initalized in _after_set_system()
+        # self.orchestrator: DeepOrchestrator = None
+        # self.monitor: RichDeepOrchestratorMonitor = None
+        # self.console: Console = None
+        # self.layout: Layout = None
 
         # The following will initialize the previous four attributes, if system != None
         super().__init__(title)
@@ -297,9 +300,14 @@ class RichDisplay(Display):
         self.execution_time = 0.0
 
     def _after_set_system(self):
-        self.system.logger.info("RichDisplay._after_set_system() (self.system not None)")
-        self.orchestrator = self.system.orchestrator
-        self.monitor = RichDeepOrchestratorMonitor(self.orchestrator)
+        if self.system and self.system.logger:
+            self.logger = self.system.logger
+
+        if self.system and self.system.orchestrator:
+            self.orchestrator = self.system.orchestrator
+            self.monitor = RichDeepOrchestratorMonitor(self.system.orchestrator)
+        else:
+            raise ValueError("self.system.orchestrator can't be None!")
         self.console = Console(highlight=False, soft_wrap=False, emoji=False)
         self.layout  = self.__create_layout()
         super()._after_set_system()
@@ -331,19 +339,18 @@ class RichDisplay(Display):
 
         return layout
 
-    async def run_live(self, function: Callable[[], None]):
-        with Live(self.layout, console=self.console, refresh_per_second=4, screen=True, transient=False) as _live:
-            await function()
+    async def run_live(self, function: Awaitable[None]) -> None:
+        await function
 
     def _do_update(self, 
-        other: dict[str,any] = {},
-        is_final: bool = False) -> any:
+        other: dict[str,Any] = {},
+        is_final: bool = False) -> Any:
         """
         Update the display with the current state. 
         If `other['messages']` and/or `other['error_msg']` are not empty/None, then 
         format a `list[str]` with them, print it, and return the list.
         """
-        # self.system.logger.info(f"RichDisplay._do_update(is_final={is_final})")
+        # self.logger.info(f"RichDisplay._do_update(is_final={is_final})")
         
         # Header
         self.layout["header"].update(
@@ -399,21 +406,23 @@ class RichDisplay(Display):
                 f"Finished: See {output_dir_path_msg}log files under ./logs.",
                 "\n",
             ]
-            if other.get('messages'):
-                msg_list1.extend(other.get('messages'))
-            msg_list = [[f"[bold black]{line}[/bold black]" for line in msg_list1]]
-            if other.get('error_msg'):
-                msg_list.extend(['\n', f"[bold red]ERROR: {other.get('error_msg')}[/bold red]"])
+            other_messages = other.get('messages')
+            if other_messages:
+                msg_list1.extend(list(other_messages))
+            msg_list = [f"[bold black]{line}[/bold black]" for line in msg_list1]
+            error_msg = other.get('error_msg')
+            if error_msg:
+                msg_list.extend(['\n', f"[bold red]ERROR: {error_msg}[/bold red]"])
             for line in msg_list:
                 self.console.print(line)
-                self.system.logger.info(line)
+                self.logger.info(line)
             return msg_list
         except Exception as ex:
             print(f"Exception {ex} was raised during last output messages. Continuing...")
 
-    async def async_update(self,
-        other: dict[str,any] = {},
-        is_final: bool = False) -> any:
+    async def _do_async_update(self,
+        other: dict[str,Any] = {},
+        is_final: bool = False) -> Any:
         return await self.__update_token_usage()
 
     def __update_final_statistics(self):
@@ -426,37 +435,49 @@ class RichDisplay(Display):
         summary_table.add_column("Metric", style="cyan", width=20)
         summary_table.add_column("Value", style="green")
 
-        summary_table.add_row("Total Time", f"{self.execution_time:.2f}s")
-        summary_table.add_row("Iterations", str(self.orchestrator.iteration))
-        summary_table.add_row("Replans", str(self.orchestrator.replan_count))
-        summary_table.add_row(
-            "Tasks Completed", str(len(self.orchestrator.queue.completed_task_names))
-        )
-        summary_table.add_row(
-            "Tasks Failed", str(len(self.orchestrator.queue.failed_task_names))
-        )
-        summary_table.add_row(
-            "Knowledge Items", str(len(self.orchestrator.memory.knowledge))
-        )
-        summary_table.add_row(
-            "Artifacts Created", str(len(self.orchestrator.memory.artifacts))
-        )
-        summary_table.add_row("Agents Cached", str(len(self.orchestrator.agent_cache.cache)))
-        summary_table.add_row(
-            "Cache Hit Rate",
-            f"{self.orchestrator.agent_cache.hits / max(1, self.orchestrator.agent_cache.hits + self.orchestrator.agent_cache.misses):.1%}",
-        )
+        total_time        = f"{self.execution_time:.2f}s"
+        iterations        = "No Data!"
+        replans           = "No Data!"
+        tasks_completed   = "No Data!"
+        tasks_failed      = "No Data!"
+        knowledge_items   = "No Data!"
+        artifacts_created = "No Data!"
+        agents_cached     = "No Data!"
+        cache_hit_rate    = "No Data!"
+        if self.orchestrator:
+            iterations        = str(self.orchestrator.iteration)
+            replans           = str(self.orchestrator.replan_count)
+            if self.orchestrator.queue:
+                tasks_completed   = str(len(self.orchestrator.queue.completed_task_names))
+                tasks_failed      = str(len(self.orchestrator.queue.failed_task_names))
+            if self.orchestrator.memory:
+                knowledge_items   = str(len(self.orchestrator.memory.knowledge))
+                artifacts_created = str(len(self.orchestrator.memory.artifacts))
+            if self.orchestrator.agent_cache:
+                agents_cached     = str(len(self.orchestrator.agent_cache.cache))
+                cache_hit_rate    = f"{self.orchestrator.agent_cache.hits / max(1, self.orchestrator.agent_cache.hits + self.orchestrator.agent_cache.misses):.1%}"
+
+        summary_table.add_row("Total Time",        total_time)
+        summary_table.add_row("Iterations",        iterations)
+        summary_table.add_row("Replans",           replans)
+        summary_table.add_row("Tasks Completed",   tasks_completed)
+        summary_table.add_row("Tasks Failed",      tasks_failed)
+        summary_table.add_row("Knowledge Items",   knowledge_items)
+        summary_table.add_row("Artifacts Created", artifacts_created)
+        summary_table.add_row("Agents Cached",     agents_cached)
+        summary_table.add_row("Cache Hit Rate",    cache_hit_rate)
 
         self.console.print(summary_table)
 
     def __update_budget_summary(self):
         # Display budget summary
-        summary = self.orchestrator.budget.get_status_summary()
-        self.console.print(f"\n[yellow]{summary}[/yellow]")
+        if self.orchestrator and  self.orchestrator.budget:
+            summary = self.orchestrator.budget.get_status_summary()
+            self.console.print(f"\n[yellow]{summary}[/yellow]")
 
     def __update_knowledge_summary(self):
         # Display knowledge learned
-        if self.orchestrator.memory.knowledge:
+        if self.orchestrator and self.orchestrator.memory.knowledge and self.orchestrator.memory.knowledge:
             self.console.print("\n[bold cyan]🧠 Knowledge Extracted[/bold cyan]")
 
             knowledge_table = Table(box=box.SIMPLE)
@@ -481,8 +502,14 @@ class RichDisplay(Display):
         """Display the token usage, if available."""
         # Due to an occasionally, apparent infinite loop bug when using ollama, we
         # don't invoke this code if serving that way.
-        if self.orchestrator.context.token_counter and not self.system.provider == "ollama":
-            summary = await self.orchestrator.context.token_counter.get_summary()
+        token_counter = None
+        if self.orchestrator and self.orchestrator.context and self.orchestrator.context.token_counter:
+            token_counter = self.orchestrator.context.token_counter
+        provider = 'ollama' 
+        if self.system and hasattr(self.system, 'provider'):
+            provider = self.system.provider
+        if token_counter and not provider == "ollama":
+            summary = await token_counter.get_summary()
             if summary and hasattr(summary, "usage"):
                 self.console.print(
                     f"\n[bold]Total Tokens:[/bold] {summary.usage.total_tokens:,}"
@@ -492,7 +519,7 @@ class RichDisplay(Display):
 
     def __update_workspace_artifacts(self):
         """Display workspace artifacts if any were created."""
-        if self.orchestrator.memory.artifacts:
+        if self.orchestrator and self.orchestrator.memory and self.orchestrator.memory.artifacts:
             self.console.print("\n[bold cyan]📁 Artifacts Created[/bold cyan]")
             for name in list(self.orchestrator.memory.artifacts.keys())[:5]:
                 self.console.print(f"  • {name}")
@@ -501,10 +528,11 @@ class RichDisplay(Display):
     def __update_report_results(self):
         border_style = "green"
         strs = []
-        for task in self.system.tasks:
-            if not task.status == TaskStatus.FINISHED_OK:
-                border_style = "red"            
-            strs.append(truncate(str(task.result), 2000, '...'))
+        if self.system and hasattr(self.system, 'tasks'):
+            for task in self.system.tasks:
+                if not task.status == TaskStatus.FINISHED_OK:
+                    border_style = "red"            
+                strs.append(truncate(str(task.result), 2000, '...'))
         
         self.console.print(
             Panel('\n'.join(strs), title=task.title, border_style=border_style))

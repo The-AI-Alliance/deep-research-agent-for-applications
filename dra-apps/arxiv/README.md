@@ -17,7 +17,7 @@ Some others to consider include:
 
 We also use [Docling](https://docling-project.github.io/docling/), a powerful tool for parsing documents in different formats, including PDFs. We will run the [Docling MCP Server](https://docling-project.github.io/docling/usage/mcp/#docling-mcp)
 
-See the [configuration files](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-apps/arxiv/config/) for how they are set up.
+See the [configuration files](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-apps/arxiv/config/) for how they are set up. 
 
 ### Make Targets for Running the Application and Related Tasks
 
@@ -231,7 +231,13 @@ Finally, `--arxiv-research-prompt-path`, is also unique to this app. It is the p
 
 See [`examples/gpt-oss_20b/diabetes_report.md`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/examples/gpt-oss_20b/diabetes_report.md) for a sample report.
 
-## Customizing Data Sources for ArXiv Deep Research
+## Notes on This Application
+
+### The Default Ollama Model
+
+Note the `default_model` used in [`mcp_agent.config.ollama.yaml`](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/dra-apps/arxiv/config/mcp_agent.config.ollama.yaml). For each application, we specify the model that worked best for us in our experiments. Of course, your experiences may be different.
+
+### Customizing Data Sources for ArXiv Deep Research
 
 Much of the world's important arxiv information is behind paywalls. As an open-source demo application, we can only use freely-accessible data sources. If you have accounts to sources behind paywalls, you can add them to the application following the instructions in the main [README](https://github.com/The-AI-Alliance/deep-research-agent-for-applications/blob/main/README.md). Also, many datasets, research paper portals, etc. don't provide MCP server access, so other means are necessary.
 

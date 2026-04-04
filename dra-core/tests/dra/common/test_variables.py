@@ -19,13 +19,13 @@ class TestVariables(unittest.TestCase):
     """
     Test variables utility.
     """
-    provider_map = {'openai': 'OpenAI', 'anthropic': 'Anthropic', 'ollama': 'Ollama'}
+    provider_map: dict[str,str] = {'openai': 'OpenAI', 'anthropic': 'Anthropic', 'ollama': 'Ollama'}
     
     def check_all(self,
         kvs: dict[str, str], 
-        url_parent, url_end,
-        file_parent, file_end,
-        code, provider, format):
+        url_parent: str, url_end: str,
+        file_parent: str, file_end: str,
+        code: str, provider: str, format: VariableFormat):
 
         d = {'one': 1, 'two': 2.2, 'really': True}
         d_str = '\n'.join([f"`{k}`: {v}" for k,v in d.items()])
@@ -48,23 +48,24 @@ class TestVariables(unittest.TestCase):
             'provider',
         ])
         expected_strs = [str(v) for k,v in kvs.items()]
+        # We wrap some expressions in "str()" to make the ty typer happy.
         if format == VariableFormat.MARKDOWN:
             expected_strs.extend([
                 f"[Url](https://{url_parent}/{url_end})",
                 f"[`{file_parent}/{file_end}`](file://{file_parent}/{file_end})",
                 f"`{code}`",
                 f"```\n{code}\n```",
-                '\n'.join([f"`{k}`: {v}" for k,v in d.items()]),
-                TestVariables.provider_map.get(provider),
+                str('\n'.join([f"`{k}`: {v}" for k,v in d.items()])),
+                str(TestVariables.provider_map.get(provider)),
             ])
         else:
             expected_strs.extend([
                 f"https://{url_parent}/{url_end}",
                 f"{file_parent}/{file_end}",
-                code,
-                code,
-                '\n'.join([f"{k}: {v}" for k,v in d.items()]),
-                TestVariables.provider_map.get(provider),
+                str(code),
+                str(code),
+                str('\n'.join([f"{k}: {v}" for k,v in d.items()])),
+                str(TestVariables.provider_map.get(provider)),
             ])
 
         keys = list(kvs.keys())
@@ -147,20 +148,21 @@ class TestVariables(unittest.TestCase):
         self.assertEqual(expected, Variable.make_label(string))
 
     @given(no_brace_nonempty_text())
-    def test_Variable_get_returns_default_if_variable_or_value_None(self, string: str):
+    def test_Variable_get_value_returns_default_if_variable_or_value_None(self, string: str):
         v = Variable('key', None)
-        self.assertEqual(str, Variable.get(v, str))
-        self.assertEqual(str, Variable.get(None, str))
+        self.assertEqual(str, Variable.get_value(v, str))
+        self.assertEqual(str, Variable.get_value(None, str))
 
     @given(no_brace_nonempty_text())
-    def test_Variable_get_returns_value_if_variable_and_value_not_None(self, string: str):
+    def test_Variable_get_value_returns_value_if_variable_and_value_not_None(self, string: str):
         v = Variable('key', str)
-        self.assertEqual(str, Variable.get(v, None))
+        self.assertEqual(str, Variable.get_value(v, ''))
 
     @given(no_brace_text())
-    def test_Variable_format_returns_None_if_format_None(self, string: str):
-        variable = Variable(string, string + "_value", kind=None)
-        self.assertEqual(None, variable.format())
+    def test_Variable_format_returns_None_str_if_kind_empty(self, string: str):
+        variable = Variable(string, string + "_value", kind=Variable.no_format)
+        expected = (variable.key, variable.label, None)
+        self.assertEqual(expected, variable.format())
 
     @given(no_brace_text())
     def test_Variable_format_returns_simple_str_if_use_plain_formatting(self, string: str):
@@ -181,27 +183,16 @@ class TestVariables(unittest.TestCase):
             variable = Variable(s, None, kind=s)
             self.assertEqual((s, Variable.make_label(s), 'None'), variable.format())
 
-    def test_Variable_get_value_returns_default_if_variable_arg_None_or_value_None(self):
-        s = 'key'
-        # default is None:
-        self.assertEqual(None, Variable.get_value(None))
-        self.assertEqual(None, Variable.get_value(Variable(s, None)))
-        self.assertEqual("Not None", Variable.get_value(Variable(s, "Not None")))
-        # default is something else...
-        self.assertEqual("hello", Variable.get_value(None, default="hello"))
-        self.assertEqual("hello", Variable.get_value(Variable(s, None), default="hello"))
-        self.assertEqual("Not None", Variable.get_value(Variable(s, "Not None"), default="hello"))
-
     @given(no_brace_nonempty_text(max_size=16), no_brace_nonempty_text(max_size=16))
     def test_Variable___repr__(self, label: str, value: str):
         key = to_id(label)
         v1 = Variable(key, value, label=label, kind='code')
         actual = str(v1)
-        expected = f"Variable(key = {key}, value = {value}, label = {label}, kind = ...)"
+        expected = f"Variable(key = {key}, value = {value}, label = {label}, kind = code)"
         self.assertEqual(expected, actual)
-        v2 = Variable(key, value, label=label, kind=None)
+        v2 = Variable(key, value, label=label, kind='')
         actual = str(v2)
-        expected = f"Variable(key = {key}, value = {value}, label = {label}, kind = None)"
+        expected = f"Variable(key = {key}, value = {value}, label = {label}, kind = )"
         self.assertEqual(expected, actual)
 
     @given(st.sampled_from(['openai', 'anthropic', 'ollama']))
@@ -215,7 +206,7 @@ class TestVariables(unittest.TestCase):
     def test_provider_with_invalid_value(self, provider):
         variable = Variable('provider', 'bad', kind='provider')
         _, _, str = variable.format()
-        self.assertEqual(None, str)
+        self.assertEqual(Variable.unknown_provider, str)
 
 if __name__ == "__main__":
     unittest.main()

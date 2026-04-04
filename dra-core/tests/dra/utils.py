@@ -4,7 +4,7 @@
 from hypothesis import given, strategies as st
 import os, re
 from random import sample
-
+from typing import TypeVar, Generic
 
 # Versions that filter or map in various ways and may return empty texts:
 
@@ -49,7 +49,9 @@ def parent_path_text(min_size=1, max_size=5):
         min_size=min_size, max_size=max_size).map(
             lambda parents: os.path.join(*parents))
 
-def make_n_samples(samples: list[any], n: int) -> list[str]:
+T = TypeVar('T')  # Define type variable "T"
+
+def make_n_samples(samples: list[T], n: int) -> list[T]:
     """
     Return a n-length list taken randomly from the samples list,
     which can be shorter than n.

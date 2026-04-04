@@ -11,16 +11,16 @@ This application demonstrates the Deep Orchestrator (AdaptiveOrchestrator) for r
 - Full state visibility throughout execution
 """
 
-import asyncio
-import re
+import argparse, asyncio, re
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 from dra.core.common.observer import Observer
 from dra.core.common.tasks import BaseTask, GenerateTask, AgentTask
 from dra.core.common.utils.io import UserPrompts
 from dra.core.common.utils.main import ParserUtil, Runner
 from dra.core.common.utils.paths import resolve_path, resolve_and_require_path
 from dra.core.common.variables import Variable
-from dra.core.ux.display import Display
 
 def get_server_list() -> list[str]:
     """Define the list of tools and services to use for this app."""
@@ -44,13 +44,13 @@ class ArXivParserUtil(ParserUtil):
     def __init__(self, which_app: str, app_name: str, ux_title: str, description: str):
         super().__init__(which_app, app_name, ux_title, description)
 
-    def _do_prompt_for_missing_args(self, up: UserPrompts) -> dict[str, any]:
+    def _do_prompt_for_missing_args(self, up: UserPrompts, args: argparse.Namespace) -> dict[str, Any]:
         """Prompt the user for the query, if necessary."""
-        query = self.args.query
+        query = args.query
         if not query or not query.strip():
             query = up.read_multi_line_input("Input the query for your research")
         
-        categories = self.args.categories
+        categories = args.categories
         if not categories or not categories.strip():
             categories = up.read_one_line_input("Input any comma-separated ArXiv categories (https://arxiv.org/category_taxonomy), if any, to focus on",
                 empty_allowed=True)
@@ -117,7 +117,7 @@ def process_cli_arguments(parser_util: ParserUtil):
     in the project README.md.)
     """
 
-    parser_util.process_args()
+    processed_args = parser_util.process_args()
 
     # Custom paths for this app.
     # For example, the help for this option (and most output options) tells the user
@@ -127,13 +127,13 @@ def process_cli_arguments(parser_util: ParserUtil):
     # Obviously an 
     # output file isn't expected to exist yet, so `resolve_and_require_path` isn't called!
     
-    output_dir_path = parser_util.processed_args['output_dir_path']    
-    templates_dir_path = parser_util.processed_args['templates_dir_path']
+    output_dir_path = processed_args['output_dir_path']    
+    templates_dir_path = processed_args['templates_dir_path']
     # This must exist:
     arxiv_research_prompt_path = resolve_and_require_path(
-        parser_util.args.arxiv_research_prompt_path, templates_dir_path)
+        processed_args['arxiv_research_prompt_path'], templates_dir_path)
 
-    parser_util.processed_args['arxiv_research_prompt_path'] = \
+    processed_args['arxiv_research_prompt_path'] = \
         arxiv_research_prompt_path
 
 def create_variables(parser_util: ParserUtil) -> dict[str, Variable]:
@@ -171,7 +171,7 @@ def create_variables(parser_util: ParserUtil) -> dict[str, Variable]:
 
     return dict([(v.key, v) for v in variables_list])
 
-def make_tasks(parser_util: ParserUtil, variables: dict[str, Variable]) -> list[BaseTask]:
+def make_tasks(parser_util: ParserUtil, variables: dict[str, Variable]) -> Sequence[BaseTask]:
     """
     Create the tasks for this research agent. All applications will start with a 
     `GenerateTask` to drive the `mcp-agent` "Deep Orchestrator" that invokes the tools
@@ -193,7 +193,7 @@ def make_tasks(parser_util: ParserUtil, variables: dict[str, Variable]) -> list[
         GenerateTask(
             name="arxiv_research",
             title="📊 ArXiv Research Result",
-            model_name=parser_util.args.research_model,
+            model_name=variables['research_model'].value,
             prompt_template_path=variables['arxiv_research_prompt_path'].value,
             output_dir_path=variables['output_dir_path'].value,
             properties=variables),

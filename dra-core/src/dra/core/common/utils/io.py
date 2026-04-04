@@ -2,6 +2,7 @@
 
 from rich.console import Console
 from rich.prompt  import Confirm, Prompt
+from typing import Optional
 
 class UserPrompts():
     """
@@ -14,7 +15,7 @@ class UserPrompts():
 
     def read_multi_line_input(self, 
         prompt: str, 
-        default: str = None,
+        default: str = '',
         empty_allowed: bool = False) -> str:
         """
         Allow the user to provide multi-line input, either typed or using copy and paste.
@@ -45,20 +46,29 @@ class UserPrompts():
 
     def read_one_line_input(self, 
         prompt: str, 
-        choices: list[str] = None,
-        default: str = None,
+        choices: list[str] = [],
+        default: Optional[str] = None,
         empty_allowed: bool = False) -> str:
         """
         Prompt the user for a single line of text input.
         """     
-        while True:
-            answer = Prompt.ask(f"[green]{prompt}[/green]",
-                choices=choices, default=default).strip()
-            if answer or empty_allowed:
-                return answer
+        try:
+            while True:
+                a = ''
+                if choices:
+                    a = Prompt.ask(f"[green]{prompt}[/green]",
+                        choices=choices, default=default)
+                else:
+                    a = Prompt.ask(f"[green]{prompt}[/green]",
+                        default=default)
+                answer = a.strip() if a else ''
+                if answer or empty_allowed:
+                    return answer
+        except (KeyboardInterrupt, EOFError):
+            return ''
 
-    def confirm(self, prompt) -> str:
+    def confirm(self, prompt) -> bool:
         """
-        Prompt the user for yes/no answer.
+        Prompt the user for yes/no answer and return a bool.
         """     
         return Confirm.ask(prompt)

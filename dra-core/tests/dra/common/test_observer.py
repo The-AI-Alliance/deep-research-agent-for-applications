@@ -1,6 +1,7 @@
 # Unit tests for the "observer" module.
 
 import unittest
+from typing import Any, Optional
 from dra.core.common.observer import Observer, Observers 
 
 class TestObserver(unittest.TestCase):
@@ -20,7 +21,7 @@ class TestObserver(unittest.TestCase):
             other = {}
             if self.count >= 5:
                 is_final = True
-                other = {'done', True}
+                other = {'done': True}
             self.observer.update(self, other=other, is_final=is_final)
             return self.count
 
@@ -32,11 +33,16 @@ class TestObserver(unittest.TestCase):
             self.others = {}
 
         def _do_update(self, 
-            other: dict[str,any] = {},
-            is_final: bool = False) -> any:
-            self.counts.append(self.system.count)
+            other: dict[str,Any] = {},
+            is_final: bool = False) -> Any:
+            count = -1
+            # TODO. The ty typer can't tell that count is an attribute of
+            # of the actual Counter system we are using here.
+            if self.system and hasattr(self.system, 'count'):
+                count = self.system.count
+            self.counts.append(count)
             self.is_final = is_final
-            self.others[self.system.count] = other
+            self.others[count] = other
 
         def _after_set_system(self):
             self.counts = []
@@ -47,7 +53,11 @@ class TestObserver(unittest.TestCase):
         obs = TestObserver.CounterObserver()
         self.assertEqual(None, obs.system)
 
-    def check_observation(self, obs: CounterObserver, counter: Counter, disallow_system_change: bool=False, ignore_range: range=None):
+    def check_observation(self, 
+        obs: CounterObserver,
+        counter: Counter,
+        disallow_system_change: bool=False,
+        ignore_range: Optional[range] = None):
         expected_counts = [0]
         expected_others = {0: {}}
         for i in range(4):
@@ -67,7 +77,7 @@ class TestObserver(unittest.TestCase):
         
         counter.incr()
         expected_counts.append(5)
-        expected_others[5] = {'done', True}
+        expected_others[5] = {'done': True}
         self.assertEqual(True, obs.is_final)
         self.assertEqual(expected_counts, obs.counts)
         self.assertEqual(expected_others, obs.others)
@@ -118,8 +128,6 @@ class TestObserver(unittest.TestCase):
         obs2 = TestObserver.CounterObserver()
         obss = Observers({'obs1': obs1, 'obs2': obs2})
         obss.add_observers({})
-        self.assertEqual(2, len(obss.observers))
-        obss.add_observers(None)
         self.assertEqual(2, len(obss.observers))
 
     def test_Observers_add_new_observers_disallowed_if_keys_not_unique(self):

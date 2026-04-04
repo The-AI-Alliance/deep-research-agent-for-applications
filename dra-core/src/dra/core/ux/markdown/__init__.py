@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 The Markdown-formatted streaming output version of Deep Orchestrator Research Example
 """
@@ -9,10 +8,11 @@ import argparse
 import json
 import re
 import time
+from collections.abc import Sequence
 from datetime import datetime, timedelta
 from json.decoder import JSONDecodeError
 from pathlib import Path
-from typing import cast, Callable, Generic
+from typing import cast, no_type_check, Any, Generic, Optional
 
 from mcp_agent.workflows.deep_orchestrator.orchestrator import DeepOrchestrator
 from openai.types.chat import ChatCompletionMessage
@@ -34,136 +34,143 @@ class MarkdownDeepOrchestratorMonitor():
     """Markdown-based monitor to expose all internal state of the Deep Orchestrator."""
     # TODO: Merge with MarkdownObserver
 
-    def __init__(self, orchestrator: DeepOrchestrator):
+    def __init__(self, orchestrator: Optional[DeepOrchestrator]):
         self.orchestrator = orchestrator
         self.start_time = time.time()
         self.execution_time = self.start_time - self.start_time
 
     def get_budget_table(self) -> MarkdownTable:
         """Get budget status as a Markdown Table"""
-        budget = self.orchestrator.budget
-        usage = budget.get_usage_pct()
-        budget.get_remaining()
-
         table = MarkdownTable(title="💰 Budget")
-        table.add_columns([
+        table.add_columns_with_justifications([
             ("Resource", 'left'),
             ("Used",     'right'),
             ("Limit",    'right'),
             ("Usage %",  'right'),
         ])
 
-        # Tokens
-        table.add_row([
-            "Tokens",
-            f"{budget.tokens_used:,}",
-            f"{budget.max_tokens:,}",
-            f"{usage['tokens']:.1%}",
-        ])
+        if not self.orchestrator:
+            table.add_row([
+                "No Data!", "No Data!", "No Data!", "No Data!",])
+        else:            
+            budget = self.orchestrator.budget
+            usage = budget.get_usage_pct()
+            budget.get_remaining()
 
-        # Cost
-        table.add_row([
-            "Cost",
-            f"${budget.cost_incurred:.3f}",
-            f"${budget.max_cost:.2f}",
-            f"{usage['cost']:.1%}",
-        ])
+            # Tokens
+            table.add_row([
+                "Tokens",
+                f"{budget.tokens_used:,}",
+                f"{budget.max_tokens:,}",
+                f"{usage['tokens']:.1%}",
+            ])
 
-        # Time
-        elapsed = datetime.now(budget.start_time.tzinfo) - budget.start_time
-        elapsed_minutes = elapsed.total_seconds() / 60
-        table.add_row([
-            "Time",
-            f"{elapsed_minutes:.1f} min",
-            f"{budget.max_time_minutes} min",
-            f"{usage['time']:.1%}",
-        ])
+            # Cost
+            table.add_row([
+                "Cost",
+                f"${budget.cost_incurred:.3f}",
+                f"${budget.max_cost:.2f}",
+                f"{usage['cost']:.1%}",
+            ])
+
+            # Time
+            elapsed = datetime.now(budget.start_time.tzinfo) - budget.start_time
+            elapsed_minutes = elapsed.total_seconds() / 60
+            table.add_row([
+                "Time",
+                f"{elapsed_minutes:.1f} min",
+                f"{budget.max_time_minutes} min",
+                f"{usage['time']:.1%}",
+            ])
 
         return table
 
     def get_queue_tree(self) -> MarkdownTree:
         """Get task queue as a Markdown Tree"""
-        queue = self.orchestrator.queue
         tree = MarkdownTree(label = "📋 Task Queue")
+        
+        if not self.orchestrator:
+            tree.add("❌ No data!")
+        else:
+            queue = self.orchestrator.queue
+            # Completed steps
+            if queue.completed_steps:
+                completed = tree.add("✅ Completed Steps")
+                for step in queue.completed_steps[-2:]:  # Last 2 steps only
+                    step_node = completed.add(f"{step.description[:60]}...")
+                    # Show first 3 tasks if many, otherwise all
+                    tasks_to_show = step.tasks[:3] if len(step.tasks) > 3 else step.tasks
+                    for task in tasks_to_show:
+                        if task.status == "completed":
+                            icon = "✓"
+                        elif task.status == "failed":
+                            icon = "✗"
+                        else:
+                            icon = "•"
+                        step_node.add(f"{task.description[:40]}...")
+                    if len(step.tasks) > 3:
+                        step_node.add(f"... +{len(step.tasks) - 3} more tasks")
 
-        # Completed steps
-        if queue.completed_steps:
-            completed = tree.add("✅ Completed Steps")
-            for step in queue.completed_steps[-2:]:  # Last 2 steps only
-                step_node = completed.add(f"{step.description[:60]}...")
-                # Show first 3 tasks if many, otherwise all
-                tasks_to_show = step.tasks[:3] if len(step.tasks) > 3 else step.tasks
+            # Current/Active step - prioritize showing active and failed tasks
+            current_step = queue.get_next_step()
+            if current_step:
+                active = tree.add("▶ Active Step")
+                active_node = active.add(f"{current_step.description[:60]}...")
+
+                # Sort tasks to prioritize: in_progress > failed > pending > completed
+                def task_priority(task):
+                    priorities = {
+                        "in_progress": 0,
+                        "failed": 1,
+                        "pending": 2,
+                        "completed": 3,
+                    }
+                    return priorities.get(task.status, 4)
+
+                sorted_tasks = sorted(current_step.tasks, key=task_priority)
+                tasks_to_show = sorted_tasks[:5]  # Show up to 5 for active step
+
                 for task in tasks_to_show:
-                    if task.status == "completed":
-                        icon = "✓"
+                    if task.status == "in_progress":
+                        icon = "⟳"
                     elif task.status == "failed":
                         icon = "✗"
+                    elif task.status == "completed":
+                        icon = "✓"
                     else:
                         icon = "•"
-                    step_node.add(f"{task.description[:40]}...")
-                if len(step.tasks) > 3:
-                    step_node.add(f"... +{len(step.tasks) - 3} more tasks")
+                    active_node.add(f"{icon} {task.description[:40]}...")
 
-        # Current/Active step - prioritize showing active and failed tasks
-        current_step = queue.get_next_step()
-        if current_step:
-            active = tree.add("▶ Active Step")
-            active_node = active.add(f"{current_step.description[:60]}...")
+                # Show remaining count with status breakdown if needed
+                remaining = len(current_step.tasks) - len(tasks_to_show)
+                if remaining > 0:
+                    # Count by status for the remaining tasks
+                    status_counts = {}
+                    for task in sorted_tasks[4:]:
+                        status_counts[task.status] = status_counts.get(task.status, 0) + 1
 
-            # Sort tasks to prioritize: in_progress > failed > pending > completed
-            def task_priority(task):
-                priorities = {
-                    "in_progress": 0,
-                    "failed": 1,
-                    "pending": 2,
-                    "completed": 3,
-                }
-                return priorities.get(task.status, 4)
+                    if status_counts:
+                        parts = []
+                        if status_counts.get("pending", 0) > 0:
+                            parts.append(f"{status_counts['pending']} pending")
+                        if status_counts.get("completed", 0) > 0:
+                            parts.append(f"{status_counts['completed']} done")
+                        active_node.add(
+                            f"... +{remaining} more ({', '.join(parts)})"
+                        )
 
-            sorted_tasks = sorted(current_step.tasks, key=task_priority)
-            tasks_to_show = sorted_tasks[:5]  # Show up to 5 for active step
+            # Pending steps (just count)
+            if queue.pending_steps:
+                _pending = tree.add(f"⏳ {len(queue.pending_steps)} Pending Steps")
 
-            for task in tasks_to_show:
-                if task.status == "in_progress":
-                    icon = "⟳"
-                elif task.status == "failed":
-                    icon = "✗"
-                elif task.status == "completed":
-                    icon = "✓"
-                else:
-                    icon = "•"
-                active_node.add(f"{icon} {task.description[:40]}...")
+            # Failed tasks summary if any
+            if queue.failed_task_names:
+                failed = tree.add(f"❌ {len(queue.failed_task_names)} Failed Tasks")
+                for task_name in list(queue.failed_task_names)[:2]:
+                    failed.add(f"{task_name}")
 
-            # Show remaining count with status breakdown if needed
-            remaining = len(current_step.tasks) - len(tasks_to_show)
-            if remaining > 0:
-                # Count by status for the remaining tasks
-                status_counts = {}
-                for task in sorted_tasks[4:]:
-                    status_counts[task.status] = status_counts.get(task.status, 0) + 1
-
-                if status_counts:
-                    parts = []
-                    if status_counts.get("pending", 0) > 0:
-                        parts.append(f"{status_counts['pending']} pending")
-                    if status_counts.get("completed", 0) > 0:
-                        parts.append(f"{status_counts['completed']} done")
-                    active_node.add(
-                        f"... +{remaining} more ({', '.join(parts)})"
-                    )
-
-        # Pending steps (just count)
-        if queue.pending_steps:
-            _pending = tree.add(f"⏳ {len(queue.pending_steps)} Pending Steps")
-
-        # Failed tasks summary if any
-        if queue.failed_task_names:
-            failed = tree.add(f"❌ {len(queue.failed_task_names)} Failed Tasks")
-            for task_name in list(queue.failed_task_names)[:2]:
-                failed.add(f"{task_name}")
-
-        # Queue summary
-        tree.add(f"📊 {queue.get_progress_summary()}")
+            # Queue summary
+            tree.add(f"📊 {queue.get_progress_summary()}")
 
         return tree
 
@@ -204,85 +211,138 @@ class MarkdownDeepOrchestratorMonitor():
 
     def get_memory_table(self) -> MarkdownTable:
         """Get memory status as a Markdown table"""
-        memory = self.orchestrator.memory
-        stats = memory.get_stats()
-
         table = MarkdownTable(title="🧠 Memory",
-            columns = [("Quantity", 'left'), ("Value", 'right')])
+            columns_with_justifications = [("Quantity", 'left'), ("Value", 'right')])
 
-        table.add_row(["Artifacts",       stats['artifacts']])
-        table.add_row(["Knowledge Items", stats['knowledge_items']])
-        table.add_row(["Task Results",    stats['task_results']])
-        table.add_row(["Categories",      stats['knowledge_categories']])
-        table.add_row(["Est. Tokens",     stats['estimated_tokens']])
+        if not self.orchestrator:
+            artifacts            = "No Data!"
+            knowledge_items      = "No Data!"
+            task_results         = "No Data!"
+            knowledge_categories = "No Data!"
+            estimated_tokens     = "No Data!"
+        else:
+            stats = self.orchestrator.memory.get_stats()
+            artifacts            = stats['artifacts']
+            knowledge_items      = stats['knowledge_items']
+            task_results         = stats['task_results']
+            knowledge_categories = stats['knowledge_categories']
+            estimated_tokens     = stats['estimated_tokens']
+
+        table.add_row(["Artifacts",       artifacts])
+        table.add_row(["Knowledge Items", knowledge_items])
+        table.add_row(["Task Results",    task_results])
+        table.add_row(["Categories",      knowledge_categories])
+        table.add_row(["Est. Tokens",     estimated_tokens])
         return table
 
     def get_knowledge_table(self) -> MarkdownTable:
         """Get recent knowledge items"""
 
         table = MarkdownTable(title="🧠 Recent Memory Knowledge (last three...)",
-            columns = [("Quantity", 'left'), ("Value", 'right')])
+            columns_with_justifications = [("Quantity", 'left'), ("Value", 'right')])
 
-        memory = self.orchestrator.memory
-        if memory.knowledge:
-            for item in memory.knowledge[-3:]:
-                valstr = str(item.value)
-                valstr400 = valstr[:400]
-                if valstr400 != valstr:
-                    valstr400 = valstr400 + "..."
-                table.add_row([item.key[:40], valstr400])
+        if not self.orchestrator:
+            table.add_row(["No Data!", ""])
         else:
-            table.add_row(["None", ""])
+            memory = self.orchestrator.memory
+            if memory.knowledge:
+                for item in memory.knowledge[-3:]:
+                    valstr = str(item.value)
+                    valstr400 = valstr[:400]
+                    if valstr400 != valstr:
+                        valstr400 = valstr400 + "..."
+                    table.add_row([item.key[:40], valstr400])
+            else:
+                table.add_row(["None", ""])
+
         return table
 
     def get_agents_table(self) -> MarkdownTable:
         """Get agent cache status as a Markdown Table"""
-        cache = self.orchestrator.agent_cache
-
         table = MarkdownTable(title="🤖 Agent Cache",
-            columns = [("Metric", 'left'), ("Value", 'right')])
+            columns_with_justifications = [("Metric", 'left'), ("Value", 'right')])
 
-        table.add_row(["Cached Agents", str(len(cache.cache))])
-        table.add_row(["Cache Hits", str(cache.hits)])
-        table.add_row(["Cache Misses", str(cache.misses)])
+        if not self.orchestrator:
+            cached_agents = "No Data!"
+            cache_hits    = "No Data!"
+            cache_misses  = "No Data!"
+            hit_rate_str  = "No Data!"
+            recents       = []
+        else:
+            cache = self.orchestrator.agent_cache
+            cached_agents = str(len(cache.cache))
+            cache_hits    = str(cache.hits)
+            cache_misses  = str(cache.misses)
+            hit_rate_str  = ''
+            if cache.hits + cache.misses > 0:
+                hit_rate = cache.hits / (cache.hits + cache.misses)
+                hit_rate_str = f"{hit_rate:.1%}"
 
-        if cache.hits + cache.misses > 0:
-            hit_rate = cache.hits / (cache.hits + cache.misses)
-            table.add_row(["Hit Rate", f"{hit_rate:.1%}"])
+            # Show cached agent names
+            recents = []
+            if cache.cache:
+                agent_names = []
+                items = list(cache.cache.items())
+                for key, agent in items[:3]:
+                    agent_names.append(agent.name)
+                if agent_names:
+                    recents.append(", ".join(agent_names))
 
-        # Show cached agent names
-        if cache.cache:
-            agent_names = []
-            items = list(cache.cache.items())
-            for key, agent in items[:3]:
-                agent_names.append(agent.name)
-            if agent_names:
-                table.add_row(["Recent", ", ".join(agent_names)])
+        table.add_row(["Cached Agents", cached_agents])
+        table.add_row(["Cache Hits",    cache_hits])
+        table.add_row(["Cache Misses",  cache_misses])
+        if hit_rate_str:
+            table.add_row(["Hit Rate",  hit_rate_str])
+        if recents:
+            for recent in recents:
+                table.add_row(["Recent", recent])
 
         return table
 
     def get_policy_table(self) -> MarkdownTable:
         """Get policy engine status as a Markdown section"""
-        policy = self.orchestrator.policy
-
         table = MarkdownTable(title="⚙️ Policy Engine", 
-            columns=[('Quantity', 'left'),('Value', 'right')])
-        table.add_row(["Consecutive Failures", policy.consecutive_failures/policy.max_consecutive_failures])
-        table.add_row(["Total Successes", policy.total_successes])
-        table.add_row(["Total Failures", policy.total_failures])
-        table.add_row(["Failure Rate", f"{policy.get_failure_rate():.1%}"])
+            columns_with_justifications=[('Quantity', 'left'),('Value', 'right')])
+
+        if not self.orchestrator:
+            failures        = "No Data!"
+            total_successes = "No Data!"
+            total_failures  = "No Data!"
+            failure_rate    = "No Data!"
+        else:
+            policy = self.orchestrator.policy
+            failures        = policy.consecutive_failures/policy.max_consecutive_failures
+            total_successes = policy.total_successes
+            total_failures  = policy.total_failures
+            failure_rate    = f"{policy.get_failure_rate():.1%}"
+
+        table.add_row(["Consecutive Failures", failures])
+        table.add_row(["Total Successes",      total_successes])
+        table.add_row(["Total Failures",       total_failures])
+        table.add_row(["Failure Rate",         failure_rate])
         return table
 
     def get_status_summary_table(self) -> MarkdownTable:
         """Get overall status summary as a Markdown table."""
-        self.update_execution_time()
-
+        exec_time = self.update_execution_time()
         table = MarkdownTable(title="📊 Status", 
-            columns=[('Quantity', 'left'),('Value', 'right')])
-        table.add_row(["Objective", f"{self.orchestrator.objective[:50]}... (see full objective below)"])
-        table.add_row(["Iteration", self.orchestrator.iteration/self.orchestrator.config.execution.max_iterations])
-        table.add_row(["Replans",   self.orchestrator.replan_count/self.orchestrator.config.execution.max_replans])
-        table.add_row(["Elapsed",   self.execution_time])
+            columns_with_justifications=[('Quantity', 'left'),('Value', 'right')])
+
+        if not self.orchestrator:
+            objective = "No Data!"
+            iteration = "No Data!"
+            replans   = "No Data!"
+            elapsed   = "No Data!"
+        else:
+            objective = f"{self.orchestrator.objective[:50]}... (see full objective below)"
+            iteration = self.orchestrator.iteration/self.orchestrator.config.execution.max_iterations
+            replans   = self.orchestrator.replan_count/self.orchestrator.config.execution.max_replans
+            elapsed   = exec_time
+
+        table.add_row(["Objective", objective])
+        table.add_row(["Iteration", iteration])
+        table.add_row(["Replans",   replans])
+        table.add_row(["Elapsed",   elapsed])
         return table
 
     def get_objective_section(self) -> MarkdownSection:
@@ -290,12 +350,17 @@ class MarkdownDeepOrchestratorMonitor():
             "The _full objective_ abbreviated in the table above is shown next.",
             "\n",
         ]
-        content.extend([f"> {line}" for line in self.orchestrator.objective.split('\n')])
-        content.extend(["\n", "(End of the objective listing...)"])
+        if not self.orchestrator:
+            content.extend(["\n", "Objective information not available!", "\n"])
+        else:
+            lines = self.orchestrator.objective.split('\n')
+            content.extend([f"> {line}" for line in lines])
+            content.extend(["\n", "(End of the objective listing...)"])
+
         objective = MarkdownSection(title="Full Objective", content=content)
         return objective
 
-    def update_execution_time(self) -> timedelta:
+    def update_execution_time(self) -> float:
         self.end_time = time.time()
         self.execution_time = self.end_time - self.start_time
         return self.execution_time
@@ -316,7 +381,7 @@ class MarkdownObserver(Observer[DeepResearch]):
 
     def __init__(self, 
         title: str,
-        yaml_header_template: Path = None):
+        yaml_header_template: Optional[Path] = None):
         """Construct a MarkdownObserver object.
 
         Args:
@@ -341,18 +406,22 @@ class MarkdownObserver(Observer[DeepResearch]):
         super().__init__(disallow_system_change=True)
         self.title = title
         self.yaml_header_template = yaml_header_template
+
         # Lazy initialize these in `_after_set_system()`.
-        self.monitor: MarkdownDeepOrchestratorMonitor = None
-        self.orchestrator: DeepOrchestrator = None
+        # self.monitor: MarkdownDeepOrchestratorMonitor
+        # self.research_report_path: Path
 
     def _after_set_system(self):
         """
         Once the system is set, we finish initializing this object.
         """ 
-        self.system.logger.info("MarkdownDisplay._after_set_system() (self.system not None)")
-        self.orchestrator = self.system.orchestrator
-        self.monitor = MarkdownDeepOrchestratorMonitor(self.orchestrator)
-
+        if self.system and self.system.logger:
+            self.system.logger.info("MarkdownObserver._after_set_system() (self.system not None)")
+        if self.system and self.system.orchestrator:
+            self.monitor = MarkdownDeepOrchestratorMonitor(self.system.orchestrator)
+        else:
+            raise ValueError("self.system.orchestrator can't be None!")
+            
         output_dir_path = self.__get_var_value('output_dir_path', Path('./output'))
         self.research_report_path = self.__get_var_value('research_report_path',
             output_dir_path / 'research_report.md')
@@ -362,21 +431,21 @@ class MarkdownObserver(Observer[DeepResearch]):
         super()._after_set_system()
 
     def _do_update(self, 
-        other: dict[str,any] = {},
-        is_final: bool = False) -> any:
+        other: dict[str,Any] = {},
+        is_final: bool = False) -> Any:
         """
         Update the display with the current state. Because the final Markdown report 
         is all we care about, we don't do anything unless `is_final == True`! 
         """
-        # self.system.logger.info(f"MarkdownDisplay._do_update(is_final={is_final})")
+        # self.system.logger.info(f"MarkdownObserver._do_update(is_final={is_final})") 
         
         if not is_final:
             return self.layout
 
         self.monitor.update_execution_time()
         
-        messages  = other.get('messages')
-        error_msg = other.get('error_msg')
+        messages  = other.get('messages', '')
+        error_msg = other.get('error_msg', '')
         self.__report_results(messages=messages, error_msg=error_msg)
 
         statistics = self.layout["statistics_section"]
@@ -405,39 +474,39 @@ class MarkdownObserver(Observer[DeepResearch]):
 
         return self.layout
 
-    async def async_update(self,
-        other: dict[str,any] = {},
-        is_final: bool = False) -> any:
+    async def _do_async_update(self,
+        other: dict[str,Any] = {},
+        is_final: bool = False) -> Any:
         if not is_final:
             return None
         return await self.__update_token_usage()
 
-    def __get_var_value(self, key: str, default: any = None) -> any:
+    def __get_var_value(self, key: str, default: Any = None) -> Any:
         if not self.system:
             raise ValueError("Logic error: self.system not yet initialized!")
         variable = self.system.variables.get(key)
         return variable.value if variable else default
 
-    def __parse_json(self, s: str, context: str = '', log_failure: bool = False) -> (str, list[str]):
+    def __parse_json(self, s: str, context: str = '', log_failure: bool = False) -> tuple[str, list[str]]:
         try:
             # Handle an observed problem with returned results; '\\' that will cause json
             # parsing to fail.
             s2 = clean_json_string(s, '')
             obj = json.loads(s2)
             # format as nested bullets:
-            mu = MarkdownUtil
+            mu = MarkdownUtil()
             md_str = mu.to_markdown(obj, bullet='*', indent='\t', key_format='**%s:**')
             return ('', md_str)
         except (JSONDecodeError, TypeError) as err:
             err_msg = f"{err} raised while parsing attempting to parse {context} results."
-            if log_failure:
+            if log_failure and self.system and self.system.logger:
                 self.system.logger.warning(f"{err_msg}: input = {s}")
-            return (err_msg, None)
+            return (err_msg, [])
         except Exception as err:
             err_msg = f"{err} of type {type(err)} raised while parsing attempting to parse {context} results."
-            if log_failure:
+            if log_failure and self.system and self.system.logger:
                 self.system.logger.warning(f"{err_msg}: input = {s}")
-            return (err_msg, None)
+            return (err_msg, [])
 
     def __make_layout(self, title: str) -> MarkdownSection:
         layout = MarkdownSection(title=title)
@@ -445,8 +514,9 @@ class MarkdownObserver(Observer[DeepResearch]):
         # Make a Markdown table of the runtime properties. First wrap the keys in `...`
         # to render as fixed-width/code font.
         top_table = MarkdownTable("This Run's Properties", ['Property', 'Value'])
+        vars = list(self.system.variables.values()) if self.system and self.system.variables else []
         formatted = Variable.make_formatted(
-                self.system.variables.values(),
+                vars,
                 variable_format = VariableFormat.MARKDOWN)
         for key, label, value in formatted:
             top_table.add_row([label, value])
@@ -458,7 +528,7 @@ class MarkdownObserver(Observer[DeepResearch]):
         ])
 
         # Main structure
-        layout.add_subsections({
+        layout.add_subsections_as_dict({
             "results_section": MarkdownSection(title="📊 📈 Results", 
                 content=["This section provides the research results.", "In progress..."]),
             "statistics_section": MarkdownSection(title="💰 Runtime Statistics",
@@ -468,7 +538,7 @@ class MarkdownObserver(Observer[DeepResearch]):
         })
 
         # Top section - queue, plan, memory, budget, and other status
-        layout["statistics_section"].add_subsections({
+        layout["statistics_section"].add_subsections_as_dict({
             "queue":  MarkdownSection(title="Task Queue"),
             "plan":   MarkdownSection(title="Current Plan"),
             "memory": MarkdownSection(title="Memory"),
@@ -480,31 +550,34 @@ class MarkdownObserver(Observer[DeepResearch]):
         return layout 
 
     def add_section(self, title: str, 
-        content: list[MarkdownElement | str] = [], 
-        subsections: dict[str, MarkdownElement] = {}) -> MarkdownSection:
+        content: Sequence[MarkdownElement | str] = [], 
+        subsections: Sequence[MarkdownSection] = []) -> MarkdownSection:
         section = MarkdownSection(title=title, content=content, subsections=subsections)
         self.layout.add_subsections([section])
         return section
 
-    def __parse_openai_message(self, message_index: int, obj: any) -> list[any]:
+    def __message_to_rows(self, table: MarkdownTable, fields: dict[str,Any]):
+        for key, value in fields.items():
+            v = str(value)
+            if key == 'content':
+                v2 = v if len(v) <= 100 else f"{v[:50]} ... {v[-50:]}"
+                lines = v2.split("\n")
+                lines2, is_markdown = self.__handle_content(lines)
+            table.add_row([key, f"`{'\n'.join(lines2)}`"])
+
+    def __parse_openai_message(self, message_index: int, obj: Any) -> list[Any]:
         # For inference with OpenAI, the results will be a ChatCompletionMessage:
 
         def make_metadata_table_from_dict(
             ccm: ChatCompletionMessage) -> MarkdownTable:
             table = MarkdownTable(title=f"✉️ OpenAI/Ollama Reply Message #{message_index}: Metadata",
-                columns = [('Item', 'left'), ('Value', 'left')])
-            for key, value in ccm.to_dict().items():
-                v = str(value)
-                if key == content:
-                    v2 = v if len(v) <= 100 else f"{v[:50]} ... {v[-50:]}"
-                    lines = v2.split("\n")
-                    lines2, is_markdown = self.__handle_content(lines)
-                table.add_row([key, f"`{'\n'.join(lines2)}`"])
+                columns = ['Item', 'Value'])
+            self.__message_to_rows(table, ccm.to_dict())
             return table
 
         sobj = str(obj)
-        content: list[any] = []
-        metadata_table: MarkdownTable = None
+        content: list[Any] = []
+        metadata_table: Optional[MarkdownTable] = None
 
         if isinstance(obj, ChatCompletionMessage):
             ccm: ChatCompletionMessage = cast(ChatCompletionMessage, obj)
@@ -525,7 +598,7 @@ class MarkdownObserver(Observer[DeepResearch]):
             except:  # bail out...
                 content = [f"> {line}" for line in sobj.split('\n')]
           
-        all_content: list[any] = []
+        all_content: list[Any] = []
         if content:
             all_content = ['\n', f"✉️ Reply Message #{message_index} Content:", '\n']
             all_content.extend(content)
@@ -536,53 +609,16 @@ class MarkdownObserver(Observer[DeepResearch]):
 
         return all_content
 
-    def __parse_anthropic_message(self, message_index: int, obj: any) -> list[any]:
-        def make_metadata_table(
-            subtype: str,
-            duration_ms: int,
-            duration_api_ms: int,
-            is_error: bool,
-            num_turns: int,
-            session_id: str,
-            total_cost_usd: float | None = None,
-            usage: dict[str, any] | None = None, 
-            result: any = None,
-            structured_output: any = None) -> MarkdownTable:
-            table = MarkdownTable(title=f"✉️ Anthropic Reply Message #{message_index}: Metadata",
-                columns = [('Item', 'left'), ('Value', 'right')])
-            table.add_row(['subtype', subtype])
-            table.add_row(['duration_ms', str(duration_ms)])
-            table.add_row(['duration_api_ms', str(duration_api_ms)])
-            table.add_row(['is_error', str(is_error)])
-            table.add_row(['num_turns', str(num_turns)])
-            table.add_row(['session_id', session_id])
-            table.add_row(['total_cost_usd', str(total_cost_usd)])
-            table.add_row(['usage', str(usage)])
-            table.add_row(['total_cost_usd', str(total_cost_usd)])
-            table.add_row(['result', str(result)[0:100] + ' ...'])
-            table.add_row(['structured_output', str(structured_output)[0:100] + ' ...'])
-            return table
-
+    def __parse_anthropic_message(self, message_index: int, obj: Any) -> list[Any]:
         sobj = str(obj)
-        content: list[any] = []
-        metadata_table: MarkdownTable = None
+        content: list[Any] = []
+        metadata_table: Optional[MarkdownTable] = None
 
         if isinstance(obj, Message):
             rm: Message = cast(Message, obj)
-            content, is_markdown = self.__handle_content(str(rm.result).split('\n'))
-            if not is_markdown:
-                content = [f"> {line}" for line in content]
-            metadata_table = make_metadata_table(
-                subtype = rm.subtype,
-                duration_ms = rm.duration_ms,
-                duration_api_ms = rm.duration_api_ms,
-                is_error = rm.is_error,
-                num_turns = rm.num_turns,
-                session_id = rm.session_id,
-                total_cost_usd = rm.total_cost_usd,
-                usage = rm.usage,
-                result = rm.result,
-                structured_output = rm.structured_output)
+            metadata_table = MarkdownTable(title=f"✉️ Anthropic Reply Message #{message_index}: Metadata",
+                columns_with_justifications = [('Item', 'left'), ('Value', 'right')])
+            self.__message_to_rows(metadata_table, rm.to_dict())
         elif sobj.startswith("Message") or sobj.startswith("ResultMessage"):
             # Try parsing it with the following _ugly_ hack to extract just the
             # `content` from the string:
@@ -592,9 +628,9 @@ class MarkdownObserver(Observer[DeepResearch]):
                 s4 = re.sub('structured_output=', '\nstructured_output:\n', s3)
                 content = s4.split('\n')
             except:  # bail out...
-                content = results.split('\n')
+                content = str(sobj).split('\n')
 
-        all_content: list[any] = []
+        all_content: list[Any] = []
         if content:
             all_content = ['\n', f"**Reply Message #{message_index} Result:**", '\n']
             all_content.extend(content)
@@ -605,7 +641,7 @@ class MarkdownObserver(Observer[DeepResearch]):
 
         return all_content
 
-    def __handle_content(self, content: list[any]) -> (list[str], bool)
+    def __handle_content(self, content: list[Any]) -> tuple[list[str], bool]:
         """
         What we hope is that the content returned by messages is Markdown, 
         e.g., "[```markdown", "...", "```"]. If so, we remove the leading and
@@ -618,11 +654,12 @@ class MarkdownObserver(Observer[DeepResearch]):
         try:
             for line in content:
                 if re.match(r'^\s*```(markdown|md)\s*$', line):
-                    is_md = true
+                    is_md = True
                 elif not re.match(r'^\s*```\s*$', '', line):
                     result.append(line)
         except:
-            self.system.logger.error("Parsing out markdown failed! {content}")
+            if self.system and self.system.logger:
+                self.system.logger.error("Parsing out markdown failed! {content}") 
             result = content
             is_md = False
         return result, is_md
@@ -634,7 +671,8 @@ class MarkdownObserver(Observer[DeepResearch]):
             columns=['Property', 'Value'])
         # We don't pass any exclusions...
         for key, value in task.attributes_as_strs(variable_format = VariableFormat.MARKDOWN).items():
-            task_table.add_row([key, value])
+            if value:
+                task_table.add_row([key, value])
 
         result_section = MarkdownSection(title=f"Task #{task_number}: {task.title} (`{task.name}`)", 
             content=[f"Information for task: {task.name}", task_table])
@@ -662,7 +700,9 @@ class MarkdownObserver(Observer[DeepResearch]):
         result_section.add_subsections(subsections)
         return result_section
 
-    def __report_results(self, messages: list[str] = [], error_msg: str = None):
+    # TODO: Figure out how to fix the warnings on self.system.orchestrator
+    @no_type_check
+    def __report_results(self, messages: list[str] = [], error_msg: str = ''):
         output_dir_path_msg = ''
         odp = self.__get_var_value('output_dir_path', None)
         if odp:
@@ -693,6 +733,8 @@ class MarkdownObserver(Observer[DeepResearch]):
 
         results_section.add_subsections(results_subsections)
 
+    # TODO: Figure out how to fix the warnings on self.system.orchestrator
+    @no_type_check
     def __update_final_statistics(self) -> MarkdownSection:
         """Update the final statistics for display"""
 
@@ -701,45 +743,49 @@ class MarkdownObserver(Observer[DeepResearch]):
             columns = [("Metric", "left"), ("Value", "right")])
         
         summary_table.add_row(["Total Time", f"{self.monitor.update_execution_time()}"])
-        summary_table.add_row(["Iterations", str(self.orchestrator.iteration)])
-        summary_table.add_row(["Replans", str(self.orchestrator.replan_count)])
+        summary_table.add_row(["Iterations", str(self.system.orchestrator.iteration)])
+        summary_table.add_row(["Replans", str(self.system.orchestrator.replan_count)])
         summary_table.add_row(
-            ["Tasks Completed", str(len(self.orchestrator.queue.completed_task_names))]
+            ["Tasks Completed", str(len(self.system.orchestrator.queue.completed_task_names))]
         )
         summary_table.add_row(
-            ["Tasks Failed", str(len(self.orchestrator.queue.failed_task_names))]
+            ["Tasks Failed", str(len(self.system.orchestrator.queue.failed_task_names))]
         )
         summary_table.add_row(
-            ["Knowledge Items", str(len(self.orchestrator.memory.knowledge))]
+            ["Knowledge Items", str(len(self.system.orchestrator.memory.knowledge))]
         )
         summary_table.add_row(
-            ["Artifacts Created", str(len(self.orchestrator.memory.artifacts))]
+            ["Artifacts Created", str(len(self.system.orchestrator.memory.artifacts))]
         )
         summary_table.add_row(
-            ["Agents Cached", str(len(self.orchestrator.agent_cache.cache))]
+            ["Agents Cached", str(len(self.system.orchestrator.agent_cache.cache))]
         )
         summary_table.add_row(
             ["Cache Hit Rate",
-            f"{self.orchestrator.agent_cache.hits / max(1, self.orchestrator.agent_cache.hits + self.orchestrator.agent_cache.misses):.1%}"]
+            f"{self.system.orchestrator.agent_cache.hits / max(1, self.system.orchestrator.agent_cache.hits + self.system.orchestrator.agent_cache.misses):.1%}"]
         )
         return self.add_section("📊 Final Statistics", [summary_table])
 
+    # TODO: Figure out how to fix the warnings on self.system.orchestrator
+    @no_type_check
     def __update_budget_summary(self) -> MarkdownSection:
         """Update the budget summary (where applicable)."""
-        budget_summary = self.orchestrator.budget.get_status_summary()
+        budget_summary = self.system.orchestrator.budget.get_status_summary()
         return self.add_section("💶 Budget Summary", [budget_summary])
 
+    # TODO: Figure out how to fix the warnings on self.system.orchestrator
+    @no_type_check
     def __update_knowledge_summary(self) -> MarkdownSection:
         """Update knowledge learned."""
         knowledge_table = 'None available...'
-        if self.orchestrator.memory.knowledge:
+        if self.system.orchestrator.memory.knowledge:
             knowledge_table = MarkdownTable(title='', columns = [
                 "Category",
                 "Key",
                 "Value",
                 "Confidence",
             ])
-            for item in self.orchestrator.memory.knowledge[:10]:  # Show first 10
+            for item in self.system.orchestrator.memory.knowledge[:10]:  # Show first 10
                 key = item.key[:30] + "..." if len(item.key) > 30 else item.key
                 valstr = str(item.value)
                 value = valstr[:50] + "..." if len(valstr) > 50 else valstr
@@ -749,7 +795,7 @@ class MarkdownObserver(Observer[DeepResearch]):
                     value,
                     f"{item.confidence:.2f}",
                 ])
-            if len(self.orchestrator.memory.knowledge) > 10:
+            if len(self.system.orchestrator.memory.knowledge) > 10:
                 knowledge_table.add_row(['...', '...', '...', '...'])
 
 
@@ -758,7 +804,7 @@ class MarkdownObserver(Observer[DeepResearch]):
     async def __update_token_usage(self) -> MarkdownSection:
         """Update the token usage, if available."""
         summary_info = ["Token usage not available"]
-        if self.system.token_counter:
+        if self.system and self.system.token_counter:
             summary = await self.system.token_counter.get_summary()
             if summary and hasattr(summary, "usage"):
                 summary_info = [f"* Total Tokens: {summary.usage.total_tokens}"]
@@ -766,12 +812,14 @@ class MarkdownObserver(Observer[DeepResearch]):
                     summary_info.append(f"* Total Cost: ${summary.cost:.4f}")
         return self.add_section("🪙 Total Tokens", summary_info)
 
+    # TODO: Figure out how to fix the warnings on self.system.orchestrator
+    @no_type_check
     def __update_workspace_artifacts(self) -> MarkdownSection:
         """Update workspace artifacts if any were created."""
         artifacts_info = ["Workspace artifacts usage not available"]
-        if self.orchestrator.memory.artifacts:
+        if self.system.orchestrator.memory.artifacts:
             artifacts_info = []
-            keys = list(self.orchestrator.memory.artifacts.keys())
+            keys = list(self.system.orchestrator.memory.artifacts.keys())
             for name in keys[:5]:
                 artifacts_info.append(f"* {name}")
             if len(keys) > 5:
@@ -785,7 +833,8 @@ class MarkdownObserver(Observer[DeepResearch]):
             with self.yaml_header_template.open('r') as file: 
                 template_str = file.read()
             if template_str:
+                vars = self.system.variables if self.system and self.system.variables else {}
                 yaml_header_str = replace_variables(template_str, 
-                    title=self.title, 
-                    **self.system.variables)
+                    vars,
+                    title=self.title)
         return f"{yaml_header_str}\n{self.layout}"

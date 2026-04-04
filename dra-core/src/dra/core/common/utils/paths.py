@@ -2,15 +2,16 @@
 
 import os
 from pathlib import Path, PosixPath
+from typing import Optional
 
 def cwd() -> Path:
     """Return the real path to the current working directory, which can be changed by an application!"""
     return Path(os.path.realpath('.'))
 
 def this_files_directory(file: str|Path = __file__) -> Path:
-    return os.path.dirname(os.path.realpath(file))
+    return Path(os.path.dirname(os.path.realpath(file)))
 
-def resolve_path(path_str: str, possible_parent: Path, return_abs_path: bool = True) -> Path:
+def resolve_path(path_str: str, possible_parent: Optional[Path], return_abs_path: bool = True) -> Path:
     """
     If the input `path_str` contains a directory prefix, then return it as a `Path`.
     If it doesn't contain a directory prefix, return a Path with `possible_parent` as
@@ -18,7 +19,7 @@ def resolve_path(path_str: str, possible_parent: Path, return_abs_path: bool = T
 
     Args:
         path_str (str): A path that may or may not contain a directory prefix.
-        possible_parent (Path): If not None, use this parent path if `path_str` doesn't contain a directory prefix.
+        possible_parent (Optional[Path]): If not None, use this parent path if `path_str` doesn't contain a directory prefix.
         return_abs_path (bool): Return the absolute path if the the resolved path is relative.
 
     Returns:
@@ -28,29 +29,28 @@ def resolve_path(path_str: str, possible_parent: Path, return_abs_path: bool = T
     if not len(path.parents) or path.parents[0] == PosixPath('.'):
         if possible_parent:
             path = possible_parent / path
+    
     if return_abs_path:
         return path.resolve()
     else:
         return path
 
-def resolve_and_require_path(path_str: str, possible_parent: Path, raise_on_missing: bool = True, return_abs_path: bool = True) -> Path:
+def resolve_and_require_path(path_str: str, possible_parent: Optional[Path], return_abs_path: bool = True) -> Path:
     """
+    Resolve a path and require it to exist. If it doesn't exist raise a `ValueError`.
     If the input `path_str` contains a directory prefix, then return it as a `Path`.
     If it doesn't contain a directory prefix, return a Path with `possible_parent` as
     the directory part.
 
     Args:
         path_str (str): A path that may or may not contain a directory prefix.
-        possible_parent (Path): If not None, use this parent path is `path_str` doesn't contain a directory prefix.
-        raise_on_missing (bool): If `True` and the resolved path doesn't exist, raise a `ValueError`. If `False`, return `None`.
+        possible_parent (Optional[Path]): If not None, use this parent path is `path_str` doesn't contain a directory prefix.
         return_abs_path (bool): Return the absolute path if the the resolved path is relative.
 
     Returns:
-        The resolved path or None if the path doesn't exist, but `raise_on_missing` is `False`.
+        The resolved path, but if it doesn't exist, raise a `ValueError`.
     """
     path = resolve_path(path_str, possible_parent, return_abs_path=return_abs_path)
     if not path.exists():
-        if raise_on_missing:
-            raise ValueError(f"Resolved path '{path}' doesn't exist!")
-        path = None
+        raise ValueError(f"Resolved path '{path}' doesn't exist!")
     return path

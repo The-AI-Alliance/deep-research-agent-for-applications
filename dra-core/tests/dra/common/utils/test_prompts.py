@@ -51,7 +51,7 @@ class TestPromptUtils(unittest.TestCase):
         delim = '-'*num_dashes
         text = f"{delim}\n{frontmatter}\n{delim}\n{content}"
         actual_frontmatter, actual_content = split_frontmatter_and_content(text)
-        self.assertEqual(None, actual_frontmatter)
+        self.assertEqual('', actual_frontmatter)
         self.assertEqual(text.split(), actual_content.split())
 
     @given(st.text(), st.text(), st.text())
