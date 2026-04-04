@@ -64,9 +64,9 @@ Points to know about setting up and running the applications.
 
 ### Model Inference
 
-An account with OpenAI or Anthropic is required, or you can use local inference with Ollama and models like `gpt-oss:20b` and `qwen3.5:27b`. Those are the three supported model inference options. See [Usage](#usage) and [Configuration](#configuration) below for specifying your choice.
+An account with OpenAI or Anthropic is required, or you can use local inference with Ollama and models like `gpt-oss:20b` and `qwen3.5:35b`. Those are the three supported model inference options. See [Usage](#usage) and [Configuration](#configuration) below for specifying your choice.
 
-Choosing effective models for agentic applications is not easy. The more powerful OpenAI and Anthropic models work well, but are more expensive, especially when developing and testing applications. Choosing inference with Ollama is more economical, but finding a model that performs effectively, yet is small enough for the host machine is not easy. In our experience, using Ollama with `gpt-oss:20b` worked _most of the time_ in testing and development, but OpenAI provided the best results for actual research. Hence, consider experimenting with Ollama and then running "real" research with OpenAI or Anthropic.
+Choosing effective models for agentic applications is not easy. The more powerful OpenAI and Anthropic models work well, but are more expensive, especially when developing and testing applications. Choosing inference with Ollama is more economical, but finding a model that performs effectively, yet is small enough for the host machine is not easy. In our experience, using Ollama with `qwen3.5:35` often worked well and `gpt-oss:20b` worked _most of the time_ in testing and development, but OpenAI provided the best results for actual research. Hence, consider experimenting with Ollama and then running "real" research with OpenAI or Anthropic.
 
 ### Prerequisites
 
@@ -549,16 +549,16 @@ This configuration is found in the `mcp_agent.config.ollama.yaml` files in the s
 
 ```yaml  
 openai:
-  default_model: "gpt-oss:20b"
+  default_model: "qwen3.5:35b"
   reasoning_effort: "medium"
   base_url: "http://localhost:11434/v1"
   api_key: "ignored"
 ```
 
-In our development, we primarily use `ollama` serving `gpt-oss:20b` or `qwen3.5:27b`. If you use Ollama, you may chose a different default model. 
+In our development, we primarily use `ollama` serving `qwen3.5:35b` or `gpt-oss:20b`. If you use Ollama, you may chose a different default model. 
 
 > [!NOTE]
-> If you use `ollama` to serve models, pick the largest one that runs on your machine. For example, `gpt-oss:20b` works reasonably well, but requires more than 20GB of RAM. `qwen3.5:27b` requires about 17GB of RAM. Use the same model for both research orchestration and excel spreadsheet generation. For inference through a provider like OpenAI, it makes sense to use a less costly model for the Excel spreadsheet generation step, but for local inference, this is not an issue and it is better to load and use a single model.
+> If you use `ollama` to serve models, pick the largest one that runs on your machine. For example, `qwen3.5:35b` generally performed best in our experiments, but it requires about 23GB of RAM, while `qwen3.5:27b` requires about 17GB of RAM and `gpt-oss:20b` works reasonably well, but requires more than 20GB of RAM. Use the same model for both research orchestration and excel spreadsheet generation. For inference through a provider like OpenAI, it makes sense to use a less costly model for the Excel spreadsheet generation step, but for local inference, this is not an issue and it is better to load and use a single model.
 >
 > If you use the `ollama` server app installed on your local machine, open the settings and enable internet access from the model, which is needed to invoke other services to gather financial information! Also select the largest cache size your chosen model(s) support.
 

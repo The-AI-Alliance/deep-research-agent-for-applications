@@ -36,8 +36,15 @@ mcp:
 # mcp-agent's `OpenAIAugmentedLLM`, the definition for "openai:"
 # here is actually for inference through ollama.
 # Change the default model if you prefer to use another one.
+# Model notes: in our experiments, the following models performed 
+# best to "less effective":
+#  1. qwen3.5:35b worked well
+#  2. qwen3.5:27b did not do a good job synthesizing the results 
+#     into a report
+#  3. gpt-oss:20b generally works well, but sometimes seems to 
+#     get "lost" in an infinite loop.
 openai:
-  default_model: "gpt-oss:20b"
+  default_model: "qwen3.5:35b"
   reasoning_effort: "medium"
   base_url: "http://localhost:11434/v1"
   api_key: "ignored"

@@ -286,7 +286,9 @@ do-app-run-finance::
 		--max-tokens ${MAX_TOKENS} \
 		--max-cost-dollars ${MAX_COST_DOLLARS} \
 		--max-time-minutes ${MAX_TIME_MINUTES} \
-		--verbose ${APP_ARGS} && make TIMESTAMP=${TIMESTAMP} show-output-files
+		--verbose ${APP_ARGS} && \
+		echo "Output files in ${OUTPUT_DIR}:" && \
+		ls -l ${OUTPUT_DIR}
 
 # Application-specific run commands:
 
@@ -307,7 +309,9 @@ do-app-run-medical::
 		--max-tokens ${MAX_TOKENS} \
 		--max-cost-dollars ${MAX_COST_DOLLARS} \
 		--max-time-minutes ${MAX_TIME_MINUTES} \
-		--verbose ${APP_ARGS} && make TIMESTAMP=${TIMESTAMP} show-output-files
+		--verbose ${APP_ARGS} && \
+		echo "Output files in ${OUTPUT_DIR}:" && \
+		ls -l ${OUTPUT_DIR}
 		
 do-app-run-arxiv::
 	cd ${DRA_APPS_DIR} && uv run -m ${APP_MODULE} \
@@ -326,7 +330,9 @@ do-app-run-arxiv::
 		--max-tokens ${MAX_TOKENS} \
 		--max-cost-dollars ${MAX_COST_DOLLARS} \
 		--max-time-minutes ${MAX_TIME_MINUTES} \
-		--verbose ${APP_ARGS} && make TIMESTAMP=${TIMESTAMP} show-output-files
+		--verbose ${APP_ARGS} && \
+		echo "Output files in ${OUTPUT_DIR}:" && \
+		ls -l ${OUTPUT_DIR}
 
 .PHONY: app-setup uv-cmd-check venv-setup venv-core-setup venv-apps-setup
 
@@ -351,12 +357,6 @@ output-dir-setup::
 	mkdir -p "${DRA_APPS_DIR}/${OUTPUT_DIR}"
 	mkdir -p "${DRA_APPS_DIR}/${LOG_DIR}"
 	@echo
-
-.PHONY: show-output-files
-show-output-files::
-	@echo
-	@echo "Output files in ${DRA_APPS_DIR}/${OUTPUT_DIR}:"
-	@cd "${DRA_APPS_DIR}/${OUTPUT_DIR}" && find . -type f -exec ls -lh {} \;
 
 # Build targets
 .PHONY: build build-apps build-core build-clean build-apps-clean build-core-clean
