@@ -21,7 +21,7 @@ jobs:
           python-version: '3.10' # Or your preferred version  
   
       - name: Install dependencies  
-        run: pip install PyGithub pandas pyarrow  
+        run: pip install PyGithub=2.8.1 pandas pyarrow  
   
       # --- Configure AWS Credentials ---  
       # Recommended: Use OpenID Connect (OIDC) if your AWS setup supports it.  
