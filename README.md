@@ -23,7 +23,7 @@ See also the project [website](https://the-ai-alliance.github.io/deep-research-a
 
 ## About the Applications
 
-The applications are built using [`mcp-agent`](https://github.com/lastmile-ai/mcp-agent), a framework for creating AI agents with Model Context Protocol (MCP) integration and a common core of reusable code that makes creating new applications relatively straightforward. The application utilizes the _deep research architecture_, described in this [AI Alliance blog post](https://www.aialliance.org/blog/building-a-deep-research-agent-using-mcp-agent), which allows for the LLM to thoroughly research and revise it's findings until a comprehensive research report is complete.
+The applications are built using [`mcp-agent`](https://github.com/lastmile-ai/mcp-agent), a framework for creating AI agents with Model Context Protocol (MCP) integration and a common core of reusable code that makes creating new applications relatively straightforward. The application utilizes the _deep research architecture_, described in this [AI Alliance blog post](https://www.thealliance.ai/blog/building-a-deep-research-agent-using-mcp-agent), which allows for the LLM to thoroughly research and revise it's findings until a comprehensive research report is complete.
 
 ### Finance
 
@@ -928,7 +928,7 @@ Here are some tips:
 
 ## Contributing to This Project
 
-This project is maintained by [The AI Alliance](https://aialliance.org). We welcome contributions from developers with domain expertise in finance, healthcare, legal, and other domains (suggestions welcome), as well as developers with AI expertise. This project is also a great opportunity for those people who want to grow their skills in either way. 
+This project is maintained by [The AI Alliance](https://thealliance.ai). We welcome contributions from developers with domain expertise in finance, healthcare, legal, and other domains (suggestions welcome), as well as developers with AI expertise. This project is also a great opportunity for those people who want to grow their skills in either way. 
 
 For contribution guidelines, see the AI Alliance [CONTRIBUTING](https://github.com/The-AI-Alliance/community/blob/main/CONTRIBUTING.md) instructions. Note that we use the "Developer Certificate of Origin" (DCO). In short, all this really requires is that you add the `-s` flag to your `git commit` commands. See [this section](https://github.com/The-AI-Alliance/community/blob/main/CONTRIBUTING.md#developer-certificate-of-origin) for details.
 
